@@ -39,7 +39,6 @@ The picture below gives on overview of =tsr-training-data=:
 
   node  "tsr-training-data" as TsrTrainingData {
 
-      node container <<Docker>> {
 
         folder backgrounds <<binary>>
 
@@ -49,7 +48,6 @@ The picture below gives on overview of =tsr-training-data=:
          component "create-data.py" as createTrainingData
 
 
-      }
 
 
       folder out {
