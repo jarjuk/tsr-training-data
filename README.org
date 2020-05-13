@@ -28,7 +28,7 @@ implementation in [[https://github.com/zzh8829/yolov3-tf2][zzh8829/yolov3-tf2]].
 
 ** Architecture
 
-The picture below gives on overview of =tsr-training-data= its usage:
+The picture below gives on overview of =tsr-training-data=:
 
 #+name: process
 #+name: architecture
