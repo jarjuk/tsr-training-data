@@ -59,6 +59,20 @@ The picture below gives on overview of =tsr-training-data=:
                 file imagelist <<text>>
          }
       }
+      component  "marcus2002/yolov3-tf2-training" as Marcus2002 <<Docker>>
+
+
+    folder tfData {
+
+      file val.tf <<tensorflow data>>
+      file train.tf  <<tensorflow data>>
+    }
+
+    actor "Visual validation" as jpgval
+
+
+  }
+
 
       classimages --> createTrainingData
       backgrounds --> createTrainingData
@@ -69,29 +83,19 @@ The picture below gives on overview of =tsr-training-data=:
       createTrainingData --> classes
       createTrainingData --> imagelist
 
-  }
 
-
-  component  "marcus2002/yolov3-tf2-training" as Marcus2002 <<Docker>>
 
   YoloV3Tf2 .> Marcus2002 : Dockerized
 
-      images --> Marcus2002
-      annotations --> Marcus2002
+  images --> Marcus2002
+  annotations --> Marcus2002
       classes --> Marcus2002
       imagelist --> Marcus2002 : split into two\nfor val and train images
 
 
-  folder tfData {
-
-     file val.tf <<tensorflow data>>
-    file train.tf  <<tensorflow data>>
-  }
-
   Marcus2002 --> val.tf : create
   Marcus2002 --> train.tf : create
 
-  actor "Visual validation" as jpgval
   val.tf --> jpgval : extract random picture
   train.tf --> jpgval : extract random picture
 
