@@ -4,7 +4,7 @@
   :TOC:      :include descendants :depth 2
   :END:
 
-Generate pseudorandomize training data in VOC format for traffic sign
+Generate pseudorandomized training data in VOC format for traffic sign
 detection system.  The images are intented to train YOLOV3 algorithm
 implementation in [[https://github.com/zzh8829/yolov3-tf2][zzh8829/yolov3-tf2]].
 
