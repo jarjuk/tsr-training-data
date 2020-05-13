@@ -474,7 +474,7 @@ ls -ltr out/tsrVOC/ImageSets/Main
 
 The result is
 
-#+BEGIN_SRC sh :eval no-export :results output :exports output
+#+BEGIN_SRC sh :eval no-export :results output :exports results
 ls -tr out/tfData/tsr_train.tfrecord
 #+END_SRC
 
@@ -502,7 +502,7 @@ ls -tr out/tfData/tsr_train.tfrecord
 
 The result is
 
-#+BEGIN_SRC sh :eval no-export :results output :exports output
+#+BEGIN_SRC sh :eval no-export :results output :exports results
 ls -tr out/tfData/tsr_val.tfrecord
 #+END_SRC
 
