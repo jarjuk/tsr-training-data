@@ -350,8 +350,7 @@ One of the test images =TSR-image00002.jpg=:
 *** Output: generated XML- annotations options =annotations=
 
 Test image annotatios are generated into directory pointed by
-=annotations= -option. It default to subdirectory =annotatios= under
-=images= directory. Below is the content for example run:
+=annotations= -option.  Below is the content for example run:
 
  #+BEGIN_SRC sh :eval no-export :results output :exports results
  ls -ltr out/tsrVOC/Annotations/
