@@ -1,0 +1,555 @@
+
+* tsr-training-data - Tool to generate randomized VOC PASCAL training data 
+  :PROPERTIES:
+  :TOC:      :include descendants :depth 2
+  :END:
+
+Generate pseudorandomize training data in VOC format for traffic sign
+detection system.  The images are intented to train YOLOV3 algorithm
+implementation in [[https://github.com/zzh8829/yolov3-tf2][zzh8829/yolov3-tf2]].
+
+:CONTENTS:
+:END:
+
+** Architecture
+
+The picture below gives on overview of =tsr-training-data= its usage:
+
+#+name: process
+#+name: architecture
+#+BEGIN_SRC plantuml :eval no-export :exports results :file pics/architecture.jpg
+  node  "zzh8829/yolov3-tf2" as YoloV3Tf2 <<github>> { 
+
+  }
+
+  node  "tsr-training-data" as TsrTrainingData {
+
+      node container <<Docker>> {
+
+        folder backgrounds <<binary>>
+
+
+         folder "Class images" as classimages <<binary>>
+
+         component "create-data.py" as createTrainingData
+
+
+      }
+
+
+      folder out {
+
+         folder tstVOC {
+                folder images <<binary>>
+                folder annotations <<VOC XML>>
+                file classes <<text>>
+                file imagelist <<text>>
+         }
+      }
+
+      classimages --> createTrainingData
+      backgrounds --> createTrainingData
+
+
+      createTrainingData --> images 
+      createTrainingData --> annotations
+      createTrainingData --> classes
+      createTrainingData --> imagelist
+
+  }
+
+
+  component  "marcus2002/yolov3-tf2-training" as Marcus2002 <<Docker>>
+
+  YoloV3Tf2 .> Marcus2002 : Dockerized
+
+      images --> Marcus2002
+      annotations --> Marcus2002
+      classes --> Marcus2002
+      imagelist --> Marcus2002 : split into two\nfor val and train images
+
+
+  folder tfData {
+
+     file val.tf <<tensorflow data>>
+    file train.tf  <<tensorflow data>>
+  }
+
+  Marcus2002 --> val.tf : create
+  Marcus2002 --> train.tf : create
+
+  actor "Visual validation" as jpgval
+  val.tf --> jpgval : extract random picture
+  train.tf --> jpgval : extract random picture
+
+  node  "yolov3 tf2 training" as Marcus2002.2
+  tfData .> Marcus2002.2 : for training ylov3
+
+
+  #+END_SRC
+
+  #+RESULTS: architecture
+  [[file:pics/architecture.jpg]]
+
+=tsr-training-data= merges class images and background images to
+create VOC Pascal dataset, which can be converted to tensforflow
+format and visually inspected using dockerized tools from
+[[https://github.com/zzh8829/yolov3-tf2][zzh8829/yolov3-tf2]]. After validation tensorflow format test images are
+passed further for yolo3 training.
+
+
+
+** Getting help
+
+Running  =create-data.py= with =--help= option 
+
+#+name: usage
+#+BEGIN_SRC sh :eval no-export :results output :exports both
+python  create-data.py  --help
+#+END_SRC
+
+shows options
+
+#+RESULTS: usage
+#+begin_example
+
+       USAGE: create-data.py [flags]
+flags:
+
+create-data.py:
+  --annotations: path to  annotations folder (defaults 'annotations' under
+    images folder)
+  --backgrounds: path to backgroud images
+    (default: 'backgrounds')
+  --classImages: path to class images
+    (default: 'Images/signs')
+  --classes: path file where classnames are written
+    (default: 'classes.txt')
+  --debug: -3=fatal, -1=warning, 0=info, 1=debug
+    (default: '-1')
+    (an integer)
+  --imagelist: path file where list of images are written
+    (default: 'images.txt')
+  --images: output folder where test images are written
+    (default: 'out')
+  --[no]interactive: show training data
+    (default: 'false')
+  --maxImages: Number of images to generata, -1=proces all background images
+    (default: '-1')
+    (an integer)
+  --rotates: rotate angles to wrangle class images
+    (default: '-32,-10,-5,3,35,45')
+    (a comma separated list)
+  --testSet: Test set name (=folder in output -directory)
+    (default: 'TSR1')
+
+Try --helpfull to get a list of all flags.
+#+end_example
+
+
+
+** Using =create-data.py=
+
+#+BEGIN_SRC sh :eval no-export :results output :exports none
+rm -rf out/tsrVOC
+#+END_SRC
+
+#+RESULTS:
+
+*** Generate example test images 
+
+Running =create-data.py= without any options generates example test
+images.
+
+#+name: run-default
+#+BEGIN_SRC sh :eval no-export :results output :exports both
+python  create-data.py
+#+END_SRC
+
+The output explains the generation run
+
+#+RESULTS: run-default
+: Created 7 test images in 'out/tsrVOC/JPEGImages' with annotations in 'out/tsrVOC/Annotations' folders
+:  class names in 'out/tsrVOC/classes.txt' and list of images 'out/tsrVOC/imagelist.txt'
+:  input from from class images 'Images/signs' and backgrounds'backgrounds' folders
+
+
+*** Input: Class images option =classImages= 
+
+Class image directory is pointed by =classImages= option. 
+
+Option =classesTemplate= defines template, which controls, how class
+name is extracted from image names. This template referes to names in
+naming pattern =value-type-startOrEnd.ext=.
+
+
+Default class images located in directory =Images/signs= take
+following values:
+- =value=  : ={20,30,40,50,60,70,80,100,120,urban}=
+- =type= :  ={sign, area,led}=
+- =startOrEnd= :  ={start,end}=
+- =ext= is valid image file extension e.g. =png=, =jpg=
+
+
+#+BEGIN_SRC sh :eval no-export :results output :exports results
+ls -ltr Images/signs
+#+END_SRC
+
+#+RESULTS:
+#+begin_example
+total 3612
+-rw-rw-r-- 1 jj jj 176685 touko  3 19:58 20-sign-start.png
+-rw-rw-r-- 1 jj jj 148167 touko  3 19:59 70-sign-start.png
+-rw-rw-r-- 1 jj jj 159586 touko  3 19:59 80-sign-start.png
+-rw-rw-r-- 1 jj jj 159237 touko  3 20:00 100-sign-start.png
+-rw-rw-r-- 1 jj jj 159774 touko  3 20:00 120-sign-start.png
+-rw-rw-r-- 1 jj jj 139417 touko  3 20:01 20-sign-end.png
+-rw-rw-r-- 1 jj jj 138868 touko  3 20:02 40-sign-end.png
+-rw-rw-r-- 1 jj jj 141187 touko  3 20:03 60-sign-end.png
+-rw-rw-r-- 1 jj jj  91977 touko  3 20:03 30-area-start.png
+-rw-rw-r-- 1 jj jj  84133 touko  3 20:04 40-area-start.png
+-rw-rw-r-- 1 jj jj  90324 touko  3 20:04 50-area-start.png
+-rw-rw-r-- 1 jj jj  92117 touko  3 20:04 60-area-start.png
+-rw-rw-r-- 1 jj jj 144065 touko  3 20:05 30-area-end.png
+-rw-rw-r-- 1 jj jj 142809 touko  3 20:05 40-area-end.png
+-rw-rw-r-- 1 jj jj 144341 touko  3 20:05 50-area-end.png
+-rw-rw-r-- 1 jj jj 145483 touko  3 20:06 60-area-end.png
+-rw-rw-r-- 1 jj jj  38379 touko  3 20:14 80-led-start.png
+-rw-rw-r-- 1 jj jj  60020 touko  3 20:15 120-led-start.png
+-rw-rw-r-- 1 jj jj   7417 touko  3 20:16 100-led-start.png
+-rw-rw-r-- 1 jj jj 167258 touko  4 10:34 50-sign-start.png
+-rw-rw-r-- 1 jj jj 139883 touko  4 10:36 50-sign-end.png
+-rw-rw-r-- 1 jj jj 140155 touko  4 10:49 30-sign-end.png
+-rw-rw-r-- 1 jj jj 156815 touko  4 10:50 30-sign-start.png
+-rw-rw-r-- 1 jj jj 148650 touko  4 10:51 40-sign-start.png
+-rw-rw-r-- 1 jj jj 132627 touko  4 10:52 70-sign-end.png
+-rw-rw-r-- 1 jj jj 210360 touko  4 10:56 60-sign-start.png
+-rw-rw-r-- 1 jj jj  47325 touko  4 10:59 urban-area-start.png
+-rw-rw-r-- 1 jj jj  90642 touko  4 11:00 urban-area-end.png
+-rw-rw-r-- 1 jj jj  42307 touko  4 13:10 30-led-start.png
+-rw-rw-r-- 1 jj jj  43540 touko  4 13:11 60-led-start.png
+-rw-rw-r-- 1 jj jj  44196 touko  4 13:13 50-led-start.png
+#+end_example
+
+For example, one of the class images =100-sign-start.png= 
+
+[[file:Images/signs/100-sign-start.png]]
+
+
+*** Input: Background images option =backgrounds=
+
+=create-data.py= merges class images with background images under
+directory pointed by =backgrounds= -option. Example backaground images
+packaged with the tool are:
+
+#+BEGIN_SRC sh :eval no-export :results output :exports results
+find backgrounds \( -name '*.JPG' -o  -name '*.jpg' \)
+#+END_SRC
+
+#+RESULTS:
+: backgrounds/misc/frilly_0032.jpg
+: backgrounds/misc/frilly_0003.jpg
+: backgrounds/roads/CIMG0726.JPG.jpg
+: backgrounds/roads/CIMG3009.JPG.jpg
+: backgrounds/forest/SAM_0807.JPG
+: backgrounds/forest/SAM_0808.JPG
+: backgrounds/forest/SAM_0806.JPG
+
+One of these examples, =backgrounds/roads/CIMG0726.JPG.jpg=, is shown
+below:
+
+[[file:backgrounds/roads/CIMG0726.JPG.jpg]]
+
+
+*** Output: List of test images option =imagelist=
+
+Names of generated test image files are written into file pointed by
+=imagelist= option. Format of line is given by =imagelistTemplate=
+-option.  
+
+For the example the tool outputs
+#+BEGIN_SRC sh :eval no-export :results output :exports results
+cat out/tsrVOC/imagelist.txt
+#+END_SRC
+
+#+RESULTS:
+: TSR-image00000 -1
+: TSR-image00001 -1
+: TSR-image00002 -1
+: TSR-image00003 -1
+: TSR-image00004 -1
+: TSR-image00005 -1
+: TSR-image00006 -1
+
+
+*** Output: list of class names option =classes=
+
+Class names of the images are written into a file pointed by =classes=
+options. 
+
+For the example run class names are:
+
+#+BEGIN_SRC sh :eval no-export :results output :exports results
+cat out/tsrVOC/classes.txt
+#+END_SRC
+
+
+#+RESULTS:
+: 20-start
+: 50-start
+: 70-start
+: 30-start
+: 30-end
+
+
+*** Output: generated test images options =images=
+
+Test images are genered into the directory pointed by =images= option. 
+
+For the example, the tool generates the following files
+
+ #+BEGIN_SRC sh :eval no-export :results output :exports results 
+ ls -tr out/tsrVOC/JPEGImages/
+ #+END_SRC
+
+ #+RESULTS:
+ : TSR-image00000.jpg
+ : TSR-image00001.jpg
+ : TSR-image00002.jpg
+ : TSR-image00003.jpg
+ : TSR-image00004.jpg
+ : TSR-image00005.jpg
+ : TSR-image00006.jpg
+
+One of the test images =TSR-image00002.jpg=:
+
+ #+BEGIN_SRC sh :eval no-export :results output raw :exports results
+ find out/tsrVOC/JPEGImages -name '*002.jpg' -exec echo [[file:{}]] \;
+ #+END_SRC
+
+ #+RESULTS:
+ [[file:out/tsrVOC/JPEGImages/TSR-image00002.jpg]]
+
+
+
+*** Output: generated XML- annotations options =annotations=
+
+Test image annotatios are generated into directory pointed by
+=annotations= -option. It default to subdirectory =annotatios= under
+=images= directory. Below is the content for example run:
+
+ #+BEGIN_SRC sh :eval no-export :results output :exports results
+ ls -ltr out/tsrVOC/Annotations/
+ #+END_SRC
+
+ #+RESULTS:
+ : total 28
+ : -rw-rw-r-- 1 jj jj 606 touko 13 10:48 TSR-image00000.xml
+ : -rw-rw-r-- 1 jj jj 603 touko 13 10:48 TSR-image00001.xml
+ : -rw-rw-r-- 1 jj jj 601 touko 13 10:48 TSR-image00002.xml
+ : -rw-rw-r-- 1 jj jj 605 touko 13 10:48 TSR-image00003.xml
+ : -rw-rw-r-- 1 jj jj 607 touko 13 10:48 TSR-image00004.xml
+ : -rw-rw-r-- 1 jj jj 606 touko 13 10:48 TSR-image00005.xml
+ : -rw-rw-r-- 1 jj jj 605 touko 13 10:48 TSR-image00006.xml
+
+
+Example annotation file =TSR-image00002.xml=
+
+ #+BEGIN_SRC sh :eval no-export :results output :exports results
+ cat out/tsrVOC/Annotations/TSR-image00002.xml
+ #+END_SRC
+
+ #+RESULTS:
+ #+begin_example
+ <annotation>
+         <folder>TSR1</folder>
+         <filename>TSR-image00002.jpg</filename>
+         <source>
+                 <database>TSR training data</database>
+                 <annotation>classInfo: {'value': '20', 'type': 'sign', 'startOrEnd': 'start'}</annotation>
+                 <image>flickr</image>
+         </source>
+         <size>
+                 <width>1200</width>
+                 <height>900</height>
+                 <depth>3</depth>
+         </size>
+         <segmented>0</segmented>
+         <object>
+                 <name>20-start</name>
+                 <pose>Unspecified</pose>
+                 <truncated>0</truncated>
+                 <difficult>0</difficult>
+                 <bndbox>
+                         <xmin>268</xmin>
+                         <ymin>161</ymin>
+                         <xmax>499</xmax>
+                         <ymax>390</ymax>
+                 </bndbox>
+         </object>
+ </annotation>
+ #+end_example
+
+
+
+
+** Convert images to tensorflow format
+
+#+name: tag-number 
+#+BEGIN_SRC R :exports none
+1
+#+END_SRC
+
+#+BEGIN_SRC sh :eval no-export :results output :exports none
+mkdir out/tfData
+#+END_SRC
+
+
+*** Split image set to training and validation
+
+
+#+RESULTS:
+
+
+Split =out/tsrVOC/imagelist.txt= into two files
+=out/tsrVOC/ImageSets/Main/aeroplane_train.txt= and
+=out/tsrVOC/ImageSets/Main/aeroplane_val.txt= used by [[https://github.com/zzh8829/yolov3-tf2/blob/master/tools/voc2012.py][yolov3-tf2 VOC
+conversion tools]]
+
+#+BEGIN_SRC sh :eval no-export :results output
+mkdir -p out/tsrVOC/ImageSets/Main
+tail -3 out/tsrVOC/imagelist.txt > out/tsrVOC/ImageSets/Main/aeroplane_train.txt
+head  -4 out/tsrVOC/imagelist.txt > out/tsrVOC/ImageSets/Main/aeroplane_val.txt
+#+END_SRC
+
+#+RESULTS:
+
+#+BEGIN_SRC sh :eval no-export :results output :exports none
+ls -ltr out/tsrVOC/ImageSets/Main
+#+END_SRC
+
+#+RESULTS:
+: total 8
+: -rw-rw-r-- 1 jj jj 72 touko 13 14:00 aeroplane_val.txt
+: -rw-rw-r-- 1 jj jj 54 touko 13 14:00 aeroplane_train.txt
+
+
+
+*** Convert training dataset to tensorflow format
+
+#+BEGIN_SRC sh :eval no-export :results output :var TAG=tag-number
+  docker run \
+       --user $(id -u):$(id -g) \
+       --workdir /yolov3-tf2 \
+       --volume $(pwd)/out/tsrVOC/:/yolov3-tf2/tsrVOC \
+       --volume $(pwd)/out/tfData/:/yolov3-tf2/tfData \
+       marcus2002/yolov3-tf2-training:$TAG \
+         python tools/voc2012.py \
+           --classes tsrVOC/classes.txt \
+           --data_dir tsrVOC \
+           --output_file tfData/tsr_train.tfrecord \
+           --split train
+#+END_SRC
+
+
+
+#+RESULTS:
+
+The result is
+
+#+BEGIN_SRC sh :eval no-export :results output :exports output
+ls -tr out/tfData/tsr_train.tfrecord
+#+END_SRC
+
+#+RESULTS:
+: out/tfData/tsr_train.tfrecord
+
+
+*** Convert validation dataset to tensorflow format
+
+#+BEGIN_SRC sh :eval no-export :results output :var TAG=tag-number
+  docker run \
+       --user $(id -u):$(id -g) \
+       --workdir /yolov3-tf2 \
+       --volume $(pwd)/out/tsrVOC/:/yolov3-tf2/tsrVOC \
+       --volume $(pwd)/out/tfData/:/yolov3-tf2/tfData \
+       marcus2002/yolov3-tf2-training:$TAG \
+         python tools/voc2012.py \
+           --classes tsrVOC/classes.txt \
+           --data_dir tsrVOC \
+           --output_file tfData/tsr_val.tfrecord \
+           --split val
+#+END_SRC
+
+#+RESULTS:
+
+The result is
+
+#+BEGIN_SRC sh :eval no-export :results output :exports output
+ls -tr out/tfData/tsr_val.tfrecord
+#+END_SRC
+
+#+RESULTS:
+: out/tfData/tsr_val.tfrecord
+
+
+** Visualy validate tensorflow conversion
+
+To visualize training tensorflow data in
+=out/tfData/tsr_train.tfrecord= run the command
+
+#+BEGIN_SRC sh :eval no-export :results output :var TAG=tag-number
+  docker run \
+       --user $(id -u):$(id -g) \
+       --workdir /yolov3-tf2 \
+       --volume $(pwd)/out/tsrVOC/:/yolov3-tf2/tsrVOC \
+       --volume $(pwd)/out/tfData/:/yolov3-tf2/tfData \
+       marcus2002/yolov3-tf2-training:$TAG \
+         python tools/visualize_dataset.py \
+           --classes tsrVOC/classes.txt \
+           --dataset  tfData/tsr_train.tfrecord \
+           --output tfData/visu-trainset.jpg
+
+
+#+END_SRC
+
+#+RESULTS:
+
+The result shows
+
+[[file:out/tfData/visu-trainset.jpg]]
+
+
+To visualize dataset in =out/tfData/tsr_val.tfrecord= run
+
+#+BEGIN_SRC sh :eval no-export :results output :var TAG=tag-number
+  docker run \
+       --user $(id -u):$(id -g) \
+       --workdir /yolov3-tf2 \
+       --volume $(pwd)/out/tsrVOC/:/yolov3-tf2/tsrVOC \
+       --volume $(pwd)/out/tfData/:/yolov3-tf2/tfData \
+       marcus2002/yolov3-tf2-training:$TAG \
+         python tools/visualize_dataset.py \
+           --classes tsrVOC/classes.txt \
+           --dataset  tfData/tsr_val.tfrecord \
+           --output tfData/visu-valset.jpg
+#+END_SRC
+
+#+RESULTS:
+
+The result shows
+
+[[file:out/tfData/visu-valset.jpg]]
+
+
+* Fin                                                              :noexport:
+
+** Emacs variables
+
+   #+RESULTS:
+
+   # Local Variables:
+   # org-confirm-babel-evaluate: nil
+   # End:
+
+

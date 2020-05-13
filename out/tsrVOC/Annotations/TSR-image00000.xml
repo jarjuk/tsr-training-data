@@ -1,0 +1,27 @@
+<annotation>
+	<folder>TSR1</folder>
+	<filename>TSR-image00000.jpg</filename>
+	<source>
+		<database>TSR training data</database>
+		<annotation>classInfo: {'value': '30', 'type': 'sign', 'startOrEnd': 'start'}</annotation>
+		<image>flickr</image>
+	</source>
+	<size>
+		<width>639</width>
+		<height>479</height>
+		<depth>3</depth>
+	</size>
+	<segmented>0</segmented>
+	<object>
+		<name>30-start</name>
+		<pose>Unspecified</pose>
+		<truncated>0</truncated>
+		<difficult>0</difficult>
+		<bndbox>
+			<xmin>252</xmin>
+			<ymin>309</ymin>
+			<xmax>335</xmax>
+			<ymax>392</ymax>
+		</bndbox>
+	</object>
+</annotation>
