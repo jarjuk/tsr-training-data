@@ -134,27 +134,29 @@ flags:
 create-data.py:
   --annotations: path to  annotations folder (defaults 'annotations' under
     images folder)
+    (default: 'out/tsrVOC/Annotations')
   --backgrounds: path to backgroud images
     (default: 'backgrounds')
   --classImages: path to class images
     (default: 'Images/signs')
   --classes: path file where classnames are written
-    (default: 'classes.txt')
+    (default: 'out/tsrVOC/classes.txt')
+  --classesTemplate: template to interpolate classes file lines
+    (default: '{value}-{startOrEnd}')
   --debug: -3=fatal, -1=warning, 0=info, 1=debug
     (default: '-1')
     (an integer)
   --imagelist: path file where list of images are written
-    (default: 'images.txt')
+    (default: 'out/tsrVOC/imagelist.txt')
+  --imagelistTemplate: template to interpolate imagelist file lines
+    (default: '{imageFileBasename} -1\n')
   --images: output folder where test images are written
-    (default: 'out')
+    (default: 'out/tsrVOC/JPEGImages')
   --[no]interactive: show training data
     (default: 'false')
-  --maxImages: Number of images to generata, -1=proces all background images
+  --maxImages: Number of images to generate, -1=proces all background images
     (default: '-1')
     (an integer)
-  --rotates: rotate angles to wrangle class images
-    (default: '-32,-10,-5,3,35,45')
-    (a comma separated list)
   --testSet: Test set name (=folder in output -directory)
     (default: 'TSR1')
 
