@@ -1,4 +1,4 @@
-## 0.1.2-SNAPSHOT/20200514-08:18:35
+## 0.1.2/20200514-09:48:23
 
 - added instructions to use DTD in $STAGE directory
 
