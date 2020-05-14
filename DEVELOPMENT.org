@@ -1,0 +1,61 @@
+* Relaseit
+
+** Show release status
+
+#+BEGIN_SRC sh :eval no-export :results output
+releaseit.sh show
+#+END_SRC
+
+#+RESULTS:
+: /home/jj/bin/releaseit.sh - $Release:0.0.45$
+: ------------------------------------------------------------------
+: PREV_REL=0.0.0 --> REL=0.1.0-SNAPSHOT
+: ------------------------------------------------------------------
+: ## 0.1.0-SNAPSHOT/20200514-15:25:16
+: ------------------------------------------------------------------
+
+** Create release 
+
+Should not have any files unchecked
+
+#+BEGIN_SRC sh :eval no-export :results output
+git status
+#+END_SRC
+
+#+RESULTS:
+#+begin_example
+On branch dev
+Your branch is up to date with 'origin/dev'.
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+
+	DEVELOPMENT.org
+	RELEASES.md
+
+nothing added to commit but untracked files present (use "git add" to track)
+#+end_example
+
+
+#+BEGIN_SRC sh :eval no-export :results output
+releaseit.sh  create_release commit current VERSION commit tag 2>&1 || true
+#+END_SRC
+
+#+RESULTS:
+: Not a snapshot release 0.1.0
+
+
+
+* Create snapshot
+
+#+BEGIN_SRC sh :eval no-export :results output
+releaseit.sh  create_snapshot current VERSION commit
+#+END_SRC
+
+#+RESULTS:
+: [dev d601e9e] ## 0.1.1-SNAPSHOT/20200514-08:14:16
+:  3 files changed, 15 insertions(+), 15 deletions(-)
+
+
+
+
