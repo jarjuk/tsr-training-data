@@ -53,6 +53,8 @@ releaseit.sh  create_snapshot current VERSION commit || true
 #+END_SRC
 
 #+RESULTS:
+: [dev 709a71a] ## 0.1.3-SNAPSHOT/20200514-09:53:10
+:  2 files changed, 2 insertions(+), 1 deletion(-)
 
 
 
