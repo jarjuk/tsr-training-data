@@ -49,12 +49,10 @@ releaseit.sh  create_release commit current VERSION commit tag 2>&1 || true
 * Create snapshot
 
 #+BEGIN_SRC sh :eval no-export :results output
-releaseit.sh  create_snapshot current VERSION commit
+releaseit.sh  create_snapshot current VERSION commit || true
 #+END_SRC
 
 #+RESULTS:
-: [dev d601e9e] ## 0.1.1-SNAPSHOT/20200514-08:14:16
-:  3 files changed, 15 insertions(+), 15 deletions(-)
 
 
 
