@@ -1,4 +1,7 @@
 ## 0.1.2-SNAPSHOT/20200514-08:18:35
+
+- added instructions to use DTD in $STAGE directory
+
 ## 0.1.1/20200514-08:17:53
 
 - testing release
