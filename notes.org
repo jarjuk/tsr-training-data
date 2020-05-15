@@ -11,10 +11,11 @@
   src.util.showImage( img )
 #+END_SRC
 
+
 * Setup session                                                    :noexport:
 
 #+BEGIN_SRC python :eval no-export :results output :noweb no :session *Python*
-  for moduleName in [ 'src.imageTools']:
+  for moduleName in [ 'src.imageTools', "src.classImages"]:
       if moduleName  in sys.modules:
           del sys.modules[moduleName]
 
@@ -23,36 +24,51 @@
   import os.path
   import imutils
   import src.imageTools
+  import src.classImages
 
   def imageLink( imagePath ):
       return( "[[file:./" + imagePath + "]]" )
 
-  def filterImage( imagePath, filter, imageFile=None, width =100 ):
-        img = cv2.imread( imagePath)
-        if width is not None: img = imutils.resize( img, width=width)
-        img = filter( img )
-        if imageFile is None: imageFile = os.path.basename(imagePath)
-        picPath = os.path.join( "pics", imageFile )
-        cv2.imwrite( picPath, img )
-        return( imageLink(picPath) )
+  def filterImage( imagePath, filter, filterMask, imageFile=None, maskFile=None, width =100 ):
+      img = cv2.imread( imagePath)
+      cropped,mask = src.classImages.maskImage(img)
+      if width is not None: 
+          img = imutils.resize( img, width=width)
+          mask = imutils.resize( mask, width=width)
+      img = filter( img )
+      if filterMask: mask = filter( mask )
+
+      if imageFile is None: imageFile = os.path.basename(imagePath)
+      if maskFile is None: maskFile = os.path.basename(imagePath) + "-mask"
+      picPath = os.path.join( "pics", imageFile )
+      cv2.imwrite( picPath, img )
+      maskPath = os.path.join( "pics", maskFile )
+      cv2.imwrite( picPath, img )
+      cv2.imwrite( maskPath, mask )
+      return( imageLink(picPath), imageLink(maskPath) )
 
 
-  def filterDocument( imagePath, filterName, filterTool, filterValues ):
-      def printRow( col1, col2, sep="|" ):
+  def filterDocument( imagePath, filterName, filterTool, filterValues, filterMask=False ):
+      def printRow( col1, col2, col3,  sep="|" ):
           if sep is not None: 
-              print( sep, col1, sep, col2, sep)
+              print( sep, col1, sep, col2, sep, col3, sep)
           else:
-              print( col1, col2 )
+              print( col1, col2,  )
 
-      printRow( filterName, "Filtered image" )
-      printRow( "|---+---|", "", sep = None )
+      printRow( filterName, "Filtered image", "Mask" )
+      printRow( "|---+---+---|", "", "", sep = None )
 
       for filterValue in filterValues:
-          printRow( str(filterValue),
-                    filterImage( imagePath, lambda img: filterTool( img, filterValue),
-                                 imageFile = filterName + str(filterValue) + ".png"))
+          imageLink, maskLink = filterImage(
+              imagePath,
+              lambda img: filterTool( img, filterValue),
+              filterMask,
+              imageFile = filterName + str(filterValue) + ".png",
+              maskFile = filterName + str(filterValue) + "-mask.png")
 
-      printRow( "|---+---|", "", sep = None )
+          printRow( str(filterValue), imageLink, maskLink )
+
+      printRow( "|---+---+---|", "", "", sep = None )
 
 #+END_SRC
 
@@ -65,36 +81,13 @@
  #+BEGIN_SRC python :eval no-export :results output raw :session *Python* :exports results
    filter = lambda img: src.imageTools.resize( img, 200 )
    imagePath = "Images/signs/50-sign-start.png"
-   picPath = filterImage( imagePath,  filter )
+   picPath,maskPath = filterImage( imagePath,  filter, False )
    print(picPath )
 
  #+END_SRC
 
  #+RESULTS:
  [[file:./pics/50-sign-start.png]]
-
-
-** Rotate
-
-#+BEGIN_SRC python :eval no-export :results output raw :session *Python* :exports results
-  imagePath = "Images/signs/50-sign-start.png"
-  filterTool = src.imageTools.rotate_image
-  filterValues = [ -10, -5, 0, -30 ]
-
-  filterDocument( imagePath, "Rotate", filterTool, filterValues )
-#+END_SRC
-
-#+RESULTS:
-| Rotate | Filtered image            |
-|--------+---------------------------|
-|    -10 | [[file:./pics/Rotate-10.png]] |
-|     -5 | [[file:./pics/Rotate-5.png]]  |
-|      0 | [[file:./pics/Rotate0.png]]   |
-|    -30 | [[file:./pics/Rotate-30.png]] |
-|--------+---------------------------|
-
-
-
 
 
 ** Blur
@@ -108,15 +101,20 @@
 #+END_SRC
 
 #+RESULTS:
-| Blur | Filtered image         |
-|------+------------------------|
-|    1 | [[file:./pics/Blur1.png]]  |
-|    3 | [[file:./pics/Blur3.png]]  |
-|    5 | [[file:./pics/Blur5.png]]  |
-|   10 | [[file:./pics/Blur10.png]] |
-|------+------------------------|
-
-
+| Blur | Filtered image         | Mask                        |
+|------+------------------------+-----------------------------|
+|    1 | [[file:./pics/Blur1.png]]  | [[file:./pics/Blur1-mask.png]]  |
+|    3 | [[file:./pics/Blur3.png]]  | [[file:./pics/Blur3-mask.png]]  |
+|    5 | [[file:./pics/Blur5.png]]  | [[file:./pics/Blur5-mask.png]]  |
+|   10 | [[file:./pics/Blur10.png]] | [[file:./pics/Blur10-mask.png]] |
+|------+------------------------+-----------------------------|
+Traceback (most recent call last):
+  File "<stdin>", line 1, in <module>
+  File "/tmp/babel-NCgRQ4/python-qs5Joz", line 5, in <module>
+    filterDocument( imagePath, "Blur", filterTool, filterValues )
+  File "/tmp/babel-NCgRQ4/python-1wsVUU", line 39, in filterDocument
+    printRow( "|---+---+---|", "", sep = None )
+TypeError: printRow() missing 1 required positional argument: 'col3'
 
 
 
@@ -131,18 +129,18 @@
 #+END_SRC
 
 #+RESULTS:
-| Brightness | Filtered image                 |
-|------------+--------------------------------|
-|       -250 | [[file:./pics/Brightness-250.png]] |
-|       -200 | [[file:./pics/Brightness-200.png]] |
-|       -100 | [[file:./pics/Brightness-100.png]] |
-|        -50 | [[file:./pics/Brightness-50.png]]  |
-|          0 | [[file:./pics/Brightness0.png]]    |
-|         50 | [[file:./pics/Brightness50.png]]   |
-|        100 | [[file:./pics/Brightness100.png]]  |
-|        200 | [[file:./pics/Brightness200.png]]  |
-|        250 | [[file:./pics/Brightness250.png]]  |
-|------------+--------------------------------|
+| Brightness | Filtered image                 | Mask                                |
+|------------+--------------------------------+-------------------------------------|
+|       -250 | [[file:./pics/Brightness-250.png]] | [[file:./pics/Brightness-250-mask.png]] |
+|       -200 | [[file:./pics/Brightness-200.png]] | [[file:./pics/Brightness-200-mask.png]] |
+|       -100 | [[file:./pics/Brightness-100.png]] | [[file:./pics/Brightness-100-mask.png]] |
+|        -50 | [[file:./pics/Brightness-50.png]]  | [[file:./pics/Brightness-50-mask.png]]  |
+|          0 | [[file:./pics/Brightness0.png]]    | [[file:./pics/Brightness0-mask.png]]    |
+|         50 | [[file:./pics/Brightness50.png]]   | [[file:./pics/Brightness50-mask.png]]   |
+|        100 | [[file:./pics/Brightness100.png]]  | [[file:./pics/Brightness100-mask.png]]  |
+|        200 | [[file:./pics/Brightness200.png]]  | [[file:./pics/Brightness200-mask.png]]  |
+|        250 | [[file:./pics/Brightness250.png]]  | [[file:./pics/Brightness250-mask.png]]  |
+|------------+--------------------------------+-------------------------------------|
 
 
 
@@ -159,19 +157,46 @@
 #+END_SRC
 
 #+RESULTS:
-| Gamma | Filtered image           |
-|-------+--------------------------|
-|   -16 | [[file:./pics/Gamma-16.png]] |
-|    -8 | [[file:./pics/Gamma-8.png]]  |
-|    -4 | [[file:./pics/Gamma-4.png]]  |
-|    -2 | [[file:./pics/Gamma-2.png]]  |
-|    -1 | [[file:./pics/Gamma-1.png]]  |
-|     1 | [[file:./pics/Gamma1.png]]   |
-|     2 | [[file:./pics/Gamma2.png]]   |
-|     4 | [[file:./pics/Gamma4.png]]   |
-|     8 | [[file:./pics/Gamma8.png]]   |
-|    16 | [[file:./pics/Gamma16.png]]  |
-|-------+--------------------------|
+| Gamma | Filtered image | Mask |
+|-------+----------------+------|
+/home/jj/work/tsr-training-data/src/imageTools.py:135: RuntimeWarning: divide by zero encountered in double_scalars
+  for i in np.arange(0, 256)]).astype("uint8")
+| -16 | [[file:./pics/Gamma-16.png]] | [[file:./pics/Gamma-16-mask.png]] |
+| -8 | [[file:./pics/Gamma-8.png]] | [[file:./pics/Gamma-8-mask.png]] |
+| -4 | [[file:./pics/Gamma-4.png]] | [[file:./pics/Gamma-4-mask.png]] |
+| -2 | [[file:./pics/Gamma-2.png]] | [[file:./pics/Gamma-2-mask.png]] |
+| -1 | [[file:./pics/Gamma-1.png]] | [[file:./pics/Gamma-1-mask.png]] |
+| 1 | [[file:./pics/Gamma1.png]] | [[file:./pics/Gamma1-mask.png]] |
+| 2 | [[file:./pics/Gamma2.png]] | [[file:./pics/Gamma2-mask.png]] |
+| 4 | [[file:./pics/Gamma4.png]] | [[file:./pics/Gamma4-mask.png]] |
+| 8 | [[file:./pics/Gamma8.png]] | [[file:./pics/Gamma8-mask.png]] |
+| 16 | [[file:./pics/Gamma16.png]] | [[file:./pics/Gamma16-mask.png]] |
+|---+---+---|
+
+
+** Rotate
+
+#+BEGIN_SRC python :eval no-export :results output raw :session *Python* :exports results
+  imagePath = "Images/signs/50-sign-start.png"
+  filterTool = src.imageTools.rotate_image
+  filterValues = [ -10, -5, 0, -30 ]
+
+  filterDocument( imagePath, "Rotate", filterTool, filterValues, filterMask=True )
+#+END_SRC
+
+#+RESULTS:
+| Rotate | Filtered image            | Mask                           |
+|--------+---------------------------+--------------------------------|
+|    -10 | [[file:./pics/Rotate-10.png]] | [[file:./pics/Rotate-10-mask.png]] |
+|     -5 | [[file:./pics/Rotate-5.png]]  | [[file:./pics/Rotate-5-mask.png]]  |
+|      0 | [[file:./pics/Rotate0.png]]   | [[file:./pics/Rotate0-mask.png]]   |
+|    -30 | [[file:./pics/Rotate-30.png]] | [[file:./pics/Rotate-30-mask.png]] |
+|--------+---------------------------+--------------------------------|
+
+
+
+
+
 
 ** Perspective
 
@@ -184,22 +209,27 @@
   imagePath = "Images/signs/50-sign-start.png"
   filterTool = src.imageTools.perspective_image
 
-  filterValues = [ (0,20), (20,0), (20,20), (-20,20), (20,-20) ]
+  filterValues = [ 
+      (0,-45), (0,45)
+      , (-45,-0), (45,0)
+      , (45,45), (-45,45)
+  ]
 
-  filterDocument( imagePath, "Perspective", filterTool, filterValues )
+  filterDocument( imagePath, "Perspective", filterTool, filterValues, filterMask=True )
 
 
 #+END_SRC
 
 #+RESULTS:
-| Perspective | Filtered image                       |
-|-------------+--------------------------------------|
-| (0, 20)     | [[file:./pics/Perspective(0, 20).png]]   |
-| (20, 0)     | [[file:./pics/Perspective(20, 0).png]]   |
-| (20, 20)    | [[file:./pics/Perspective(20, 20).png]]  |
-| (-20, 20)   | [[file:./pics/Perspective(-20, 20).png]] |
-| (20, -20)   | [[file:./pics/Perspective(20, -20).png]] |
-|-------------+--------------------------------------|
+| Perspective | Filtered image                       | Mask                                      |
+|-------------+--------------------------------------+-------------------------------------------|
+| (0, -45)    | [[file:./pics/Perspective(0, -45).png]]  | [[file:./pics/Perspective(0, -45)-mask.png]]  |
+| (0, 45)     | [[file:./pics/Perspective(0, 45).png]]   | [[file:./pics/Perspective(0, 45)-mask.png]]   |
+| (-45, 0)    | [[file:./pics/Perspective(-45, 0).png]]  | [[file:./pics/Perspective(-45, 0)-mask.png]]  |
+| (45, 0)     | [[file:./pics/Perspective(45, 0).png]]   | [[file:./pics/Perspective(45, 0)-mask.png]]   |
+| (45, 45)    | [[file:./pics/Perspective(45, 45).png]]  | [[file:./pics/Perspective(45, 45)-mask.png]]  |
+| (-45, 45)   | [[file:./pics/Perspective(-45, 45).png]] | [[file:./pics/Perspective(-45, 45)-mask.png]] |
+|-------------+--------------------------------------+-------------------------------------------|
 
 
 

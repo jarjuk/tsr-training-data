@@ -254,6 +254,7 @@ logging.debug( "simpleWrangles.keys()", simpleWrangles.keys())
     
 
 
+
 def wrangleImages( imgs, wrangles, wrangleDict=simpleWrangles ):
     """Wrangle each 'img' in 'imgs' (note that imgs may be a list or a
     single image) using a random 'wrangler' in 'wrangles'
