@@ -1,0 +1,451 @@
+
+* Document filters
+
+#+BEGIN_SRC python :eval no-export :results output :noweb no :session *Python*
+  import src.imageTools
+  import src.util
+  import cv2
+  imagePath = "Images/signs/100-sign-start.png"
+  img = cv2.imread( imagePath).resize( "100")
+
+  src.util.showImage( img )
+#+END_SRC
+
+* Setup session                                                    :noexport:
+
+#+BEGIN_SRC python :eval no-export :results output :noweb no :session *Python*
+  for moduleName in [ 'src.imageTools']:
+      if moduleName  in sys.modules:
+          del sys.modules[moduleName]
+
+  import src.util
+  import cv2
+  import os.path
+  import imutils
+  import src.imageTools
+
+  def imageLink( imagePath ):
+      return( "[[file:./" + imagePath + "]]" )
+
+  def filterImage( imagePath, filter, imageFile=None, width =100 ):
+        img = cv2.imread( imagePath)
+        if width is not None: img = imutils.resize( img, width=width)
+        img = filter( img )
+        if imageFile is None: imageFile = os.path.basename(imagePath)
+        picPath = os.path.join( "pics", imageFile )
+        cv2.imwrite( picPath, img )
+        return( imageLink(picPath) )
+
+
+  def filterDocument( imagePath, filterName, filterTool, filterValues ):
+      def printRow( col1, col2, sep="|" ):
+          if sep is not None: 
+              print( sep, col1, sep, col2, sep)
+          else:
+              print( col1, col2 )
+
+      printRow( filterName, "Filtered image" )
+      printRow( "|---+---|", "", sep = None )
+
+      for filterValue in filterValues:
+          printRow( str(filterValue),
+                    filterImage( imagePath, lambda img: filterTool( img, filterValue),
+                                 imageFile = filterName + str(filterValue) + ".png"))
+
+      printRow( "|---+---|", "", sep = None )
+
+#+END_SRC
+
+#+RESULTS:
+
+
+* Image filters
+
+** Image to filter
+ #+BEGIN_SRC python :eval no-export :results output raw :session *Python* :exports results
+   filter = lambda img: src.imageTools.resize( img, 200 )
+   imagePath = "Images/signs/50-sign-start.png"
+   picPath = filterImage( imagePath,  filter )
+   print(picPath )
+
+ #+END_SRC
+
+ #+RESULTS:
+ [[file:./pics/50-sign-start.png]]
+
+
+** Rotate
+
+#+BEGIN_SRC python :eval no-export :results output raw :session *Python* :exports results
+  imagePath = "Images/signs/50-sign-start.png"
+  filterTool = src.imageTools.rotate_image
+  filterValues = [ -10, -5, 0, -30 ]
+
+  filterDocument( imagePath, "Rotate", filterTool, filterValues )
+#+END_SRC
+
+#+RESULTS:
+| Rotate | Filtered image            |
+|--------+---------------------------|
+|    -10 | [[file:./pics/Rotate-10.png]] |
+|     -5 | [[file:./pics/Rotate-5.png]]  |
+|      0 | [[file:./pics/Rotate0.png]]   |
+|    -30 | [[file:./pics/Rotate-30.png]] |
+|--------+---------------------------|
+
+
+
+
+
+** Blur
+
+#+BEGIN_SRC python :eval no-export :results output raw :session *Python* :exports results
+  imagePath = "Images/signs/50-sign-start.png"
+  filterTool = src.imageTools.blur_image
+  filterValues = [ 1,3,5,10 ]
+
+  filterDocument( imagePath, "Blur", filterTool, filterValues )
+#+END_SRC
+
+#+RESULTS:
+| Blur | Filtered image         |
+|------+------------------------|
+|    1 | [[file:./pics/Blur1.png]]  |
+|    3 | [[file:./pics/Blur3.png]]  |
+|    5 | [[file:./pics/Blur5.png]]  |
+|   10 | [[file:./pics/Blur10.png]] |
+|------+------------------------|
+
+
+
+
+
+** Brightness
+
+#+BEGIN_SRC python :eval no-export :results output raw :session *Python* :exports results
+  imagePath = "Images/signs/50-sign-start.png"
+  filterTool = src.imageTools.brightness_image
+  filterValues = [ -250, -200, -100, -50, 0, 50, 100, 200, 250 ]
+
+  filterDocument( imagePath, "Brightness", filterTool, filterValues )
+#+END_SRC
+
+#+RESULTS:
+| Brightness | Filtered image                 |
+|------------+--------------------------------|
+|       -250 | [[file:./pics/Brightness-250.png]] |
+|       -200 | [[file:./pics/Brightness-200.png]] |
+|       -100 | [[file:./pics/Brightness-100.png]] |
+|        -50 | [[file:./pics/Brightness-50.png]]  |
+|          0 | [[file:./pics/Brightness0.png]]    |
+|         50 | [[file:./pics/Brightness50.png]]   |
+|        100 | [[file:./pics/Brightness100.png]]  |
+|        200 | [[file:./pics/Brightness200.png]]  |
+|        250 | [[file:./pics/Brightness250.png]]  |
+|------------+--------------------------------|
+
+
+
+
+
+** Gamma
+
+#+BEGIN_SRC python :eval no-export :results output raw :session *Python* :exports results
+  imagePath = "Images/signs/50-sign-start.png"
+  filterTool = src.imageTools.gamma_image
+  filterValues = [ -16, -8, -4, -2, -1, 1, 2, 4, 8, 16 ]
+
+  filterDocument( imagePath, "Gamma", filterTool, filterValues )
+#+END_SRC
+
+#+RESULTS:
+| Gamma | Filtered image           |
+|-------+--------------------------|
+|   -16 | [[file:./pics/Gamma-16.png]] |
+|    -8 | [[file:./pics/Gamma-8.png]]  |
+|    -4 | [[file:./pics/Gamma-4.png]]  |
+|    -2 | [[file:./pics/Gamma-2.png]]  |
+|    -1 | [[file:./pics/Gamma-1.png]]  |
+|     1 | [[file:./pics/Gamma1.png]]   |
+|     2 | [[file:./pics/Gamma2.png]]   |
+|     4 | [[file:./pics/Gamma4.png]]   |
+|     8 | [[file:./pics/Gamma8.png]]   |
+|    16 | [[file:./pics/Gamma16.png]]  |
+|-------+--------------------------|
+
+
+
+
+** Perspective
+
+#+BEGIN_SRC python :eval no-export :results output raw :session *Python* :exports results
+  for moduleName in [ 'src.imageTools']:
+      if moduleName  in sys.modules:
+          del sys.modules[moduleName]
+  import src.imageTools
+
+  imagePath = "Images/signs/50-sign-start.png"
+  filterTool = src.imageTools.perspective_image
+
+  filterValues = [ (0,20), (20,0), (20,20), (-20,20), (20,-20) ]
+
+  filterDocument( imagePath, "Perspective", filterTool, filterValues )
+
+
+#+END_SRC
+
+#+RESULTS:
+| Perspective | Filtered image                       |
+|-------------+--------------------------------------|
+| (0, 20)     | [[file:./pics/Perspective(0, 20).png]]   |
+| (20, 0)     | [[file:./pics/Perspective(20, 0).png]]   |
+| (20, 20)    | [[file:./pics/Perspective(20, 20).png]]  |
+| (-20, 20)   | [[file:./pics/Perspective(-20, 20).png]] |
+| (20, -20)   | [[file:./pics/Perspective(20, -20).png]] |
+|-------------+--------------------------------------|
+
+
++** Perpective+
+
+#+BEGIN_SRC python :eval no-export :results output :noweb no :session *Python*
+  for moduleName in [ 'src.imageTools']:
+      if moduleName  in sys.modules:
+          del sys.modules[moduleName]
+
+  imagePath = "Images/signs/100-sign-start.png"
+
+  import math
+  import cv2
+  import numpy as np
+  import src.imageTools
+  import src.util
+
+  img = cv2.imread( imagePath)
+
+  def boundingBox( img ):
+      """@return  dict( ymin:int, ymax:int, xmin: int, xman: int)
+      """
+      h, w = img.shape[:2] # image shape has 3 dimensions
+      boundingBox = { "ymin": 0, "xmin":0, "ymax": h, "xmax": w }
+      return( boundingBox)
+
+
+  def boundingBox2points( boundingBox):
+      return( np.float32( [ [boundingBox["xmin"], boundingBox["ymin"]],
+                            [boundingBox["xmax"], boundingBox["ymin"]],
+                            [boundingBox["xmax"], boundingBox["ymax"]],
+                            [boundingBox["xmin"], boundingBox["ymax"]]
+      ]))
+
+  def pol2cart(rho, phi):
+      x = rho * np.cos(phi)
+      y = rho * np.sin(phi)
+      return(x, y)
+
+
+
+  def perspective( img, rots ):
+      pts1 = boundingBox2points( boundingBox(img))
+      print( "pts1", pts1 )
+
+  def coorMap( point, rot):
+      return( [np.cos(np.deg2rad(rot[0]))*point[0], np.cos(np.deg2rad(rot[1]))*point[1]] )
+      # return( [ rot[0]*point[0], rot[1]*point[1]] )
+
+
+  print( boundingBox(img) )
+  print( boundingBox2points(boundingBox(img)))
+
+  #src.util.showImage( img)
+
+  pts1 = boundingBox2points( boundingBox(img))
+  print( "pts1", pts1 )
+  # (rho,theta)=(.5,0.9)
+  # (rho,theta)=(0.5,0.2)
+  print( "pts1", pts1, "\npts2", pts2)
+
+  # Calculates Rotation Matrix given euler angles.
+  def eulerAnglesToRotationMatrix(theta):
+
+      R_x = np.array([[1,         0,                  0                   ],
+                      [0,         math.cos(theta[0]), -math.sin(theta[0]) ],
+                      [0,         math.sin(theta[0]), math.cos(theta[0])  ]
+                      ])
+
+
+
+      R_y = np.array([[math.cos(theta[1]),    0,      math.sin(theta[1])  ],
+                      [0,                     1,      0                   ],
+                      [-math.sin(theta[1]),   0,      math.cos(theta[1])  ]
+                      ])
+
+      R_z = np.array([[math.cos(theta[2]),    -math.sin(theta[2]),    0],
+                      [math.sin(theta[2]),    math.cos(theta[2]),     0],
+                      [0,                     0,                      1]
+                      ])
+
+
+      R = np.dot(R_z, np.dot( R_y, R_x ))
+
+      return R
+
+
+  theta = ( 20,-60, 0) # (pitch,yaw,?)
+  theta = ( 20,-10, 0) # (pitch,yaw,?)
+  dTheta =  [math.radians(t) for t in theta ]
+
+  # 2D transformation (ignore Z)
+  M = eulerAnglesToRotationMatrix( dTheta )
+  M[2] = [0,0,1]
+
+  print( "M.shape=", M.shape, "M=", M)
+
+  bbOld = [ boundingBox(img)["xmax"],boundingBox(img)["ymax"], 0]
+  bbNew =np.dot( M, np.array(bbOld))
+  print("bbOld", bbOld, ", bbNew", bbNew)
+
+
+  # M = cv2.getPerspectiveTransform(pts1,pts2)
+  dsize = tuple( [ int(x) for x in bbNew[:2]])
+  dsize
+  dst = cv2.warpPerspective(img,M,dsize)
+  #src.util.showImage( dst, "perspective")
+
+  dst = cv2.warpAffine(img,M[:2],dsize )
+  #src.util.showImage( dst, "affine")
+
+  # dst = cv2.warpPerspective(img,M,(boundingBox(img)["xmax"],boundingBox(img)["ymax"] ))
+  # src.util.showImage( dst, "perspective")
+
+  cv2.destroyAllWindows()
+
+  thetas = [
+      [0,10,0]
+      , [0,20,0]
+      , [0,30,0]
+      , [0,40,0]
+      , [30,40,0]
+      , [20,40,0]
+      , [10,40,0]
+      , [0,40,0]
+  ]
+  thetas = [ [x,y,z]
+      for z in [0]
+             for y in range(-350,360,45) 
+             for x in range(-350,360,45) 
+  ]
+
+  for theta in thetas:
+      dTheta =  [math.radians(t) for t in theta ]
+
+      N = eulerAnglesToRotationMatrix( dTheta )
+      M = N.copy()
+      # 2D transformation (ignore Z)
+      M[2] = [0,0,1]
+
+      def findDsize( bb, M ):
+          xmin = ymin = xmax = ymax = 0
+          for corner in boundingBox2points( bb ):
+              print( "corner.shape", corner.shape, ", corner=", corner  )
+              p = [corner[0], corner[1], 0]
+              newP = np.dot( M, np.array(p))
+              print( "corner.shape", corner.shape, ", corner=", corner, "newP", newP  )
+              xmin = min( xmin, newP[0])            
+              ymin = min( ymin, newP[1])            
+              xmax = max( xmax, newP[0])            
+              ymax = max( ymax, newP[1])
+          dsize = (int(xmax-xmin), int(ymax-ymin))
+          offset = (int(max(0,-xmin)), int(max(0,-ymin)))
+          print( "dsize=", dsize )
+          return( dsize , offset )
+
+      dsize, offset = findDsize( boundingBox(img), M )
+
+      def offsetM( offset):
+          M = np.eye(3)
+          M[0,2] = offset[0]
+          M[1,2] = offset[1]
+          return( M )
+
+      # homography maps part of the image to negative x,y values which
+      # are outside the image area so cannot be plotted.
+      # https://stackoverflow.com/questions/6087241/opencv-warpperspective
+
+      T=np.eye(3)
+      T=offsetM(offset)
+      print( "offset",offset, ", T=",T)
+
+      dst = cv2.warpPerspective(img,np.dot(T, M),dsize)
+      src.util.showImage( dst, "perspective" + str( theta))
+
+
+      # dst = cv2.warpAffine(img,M[:2],dsize )
+      # src.util.showImage( dst, "affine" + str(theta))
+
+#+END_SRC
+
+
+#+BEGIN_SRC python :eval no-export :results output :noweb no :session *Python*
+
+  for moduleName in [ 'src.imageTools']:
+        if moduleName  in sys.modules:
+            del sys.modules[moduleName]
+
+  imagePath = "Images/signs/100-sign-start.png"
+
+
+
+  import src.imageTools
+  import src.util
+
+  img = cv2.imread( imagePath)
+
+  thetas = [ [x,y,z]
+      for z in [0]
+             for y in range(-350,360,45) 
+             for x in range(-350,360,45) 
+  ]
+
+
+  for rots in thetas:
+        dst = src.imageTools.perspective_image( img, rots )
+        src.util.showImage( dst)
+#+END_SRC
+
+#+RESULTS:
+#+begin_example
+dsize= (851, 827)
+dsize= (945, 481)
+dsize= (969, 145)
+dsize= (909, 688)
+dsize= (851, 827)
+dsize= (945, 481)
+dsize= (969, 145)
+dsize= (909, 688)
+dsize= (851, 827)
+dsize= (945, 481)
+dsize= (969, 145)
+dsize= (909, 688)
+dsize= (851, 827)
+dsize= (945, 481)
+Traceback (most recent call last):
+  File "<stdin>", line 1, in <module>
+  File "/tmp/babel-NCgRQ4/python-gXBt6B", line 24, in <module>
+    src.util.showImage( dst)
+  File "/home/jj/work/tsr-training-data/src/util.py", line 14, in showImage
+    if (key == 27): raise BreakIt
+src.util.BreakIt
+#+end_example
+
+
+* Fin                                                              :noexport:
+
+** Emacs variables
+
+   #+RESULTS:
+
+   # Local Variables:
+   # org-confirm-babel-evaluate: nil
+   # End:
+
+

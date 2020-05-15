@@ -2,9 +2,26 @@ import cv2
 import random
 import numpy as np
 import imutils
+import math
+
 import functools
 
 from absl import logging
+
+def boundingBox( img ):
+   """@return  dict( ymin:int, ymax:int, xmin: int, xman: int)
+   """
+   h, w = img.shape[:2] # image shape has 3 dimensions
+   boundingBox = { "ymin": 0, "xmin":0, "ymax": h, "xmax": w }
+   return( boundingBox)
+
+def boundingBox2points( boundingBox ):
+    """@return array[ 4x array[2]]  """
+    return( np.float32( [ [boundingBox["xmin"], boundingBox["ymin"]],
+                         [boundingBox["xmax"], boundingBox["ymin"]],
+                         [boundingBox["xmax"], boundingBox["ymax"]],
+                         [boundingBox["xmin"], boundingBox["ymax"]]
+   ]))
 
 
 
@@ -13,47 +30,116 @@ def resize( img, width):
     img = imutils.resize( img, width=width)
     return( img )
 
-
-def resize_image( img, boundingBox, width ):
+def resize_image( img, width ):
     """@return resized 'img' to 'width', aspect ratio kept"""
-    h, w = img.shape[:2]
-    resizeFactor = width/w
-    boundingBoxNew =  { k: int(round(resizeFactor * v))   for (k,v) in boundingBox.items() }
-    return( imutils.resize( img, width=width), boundingBoxNew )
+    img = imutils.resize( img, width=width)
+    return(  imutils.resize( img, width=width) )
 
 def multi_filter( img, funcs ):
     return( functools.reduce( lambda img, f: f(img), funcs, img ) )
 
 
-def blur_image( img, boundingBox, kernelSize=5):
+def blur_image( img, kernelSize=5):
     """@return blulled 'img'"""
     dst = cv2.blur(img,(kernelSize,kernelSize))
-    return( dst, boundingBox )
+    return( dst )
     
 
-def brightness_image( img, boundingBox, adjust):
+def perspective_image( img, rots):
+    """
+    @param rots tuple(int, int)
+    """
+    # Calculates Rotation Matrix given euler angles.
+    def eulerAnglesToRotationMatrix(theta):
+        R_x = np.array([[1,         0,                  0                   ],
+                        [0,         math.cos(theta[0]), -math.sin(theta[0]) ],
+                        [0,         math.sin(theta[0]), math.cos(theta[0])  ]
+                        ])
+        R_y = np.array([[math.cos(theta[1]),    0,      math.sin(theta[1])  ],
+                        [0,                     1,      0                   ],
+                        [-math.sin(theta[1]),   0,      math.cos(theta[1])  ]
+                        ])
+        R_z = np.array([[math.cos(theta[2]),    -math.sin(theta[2]),    0],
+                        [math.sin(theta[2]),    math.cos(theta[2]),     0],
+                        [0,                     0,                      1]
+                        ])
+        R = np.dot(R_z, np.dot( R_y, R_x ))
+        return R
+    
+    def findDsize( bb, M ):
+        """@return dsize, offset where 'dsize': (width:int, height:int) of
+           transformed image, offset: (x:int, y:int)
+
+        """
+        xmin = ymin = xmax = ymax = 0
+        for corner in boundingBox2points( bb ):
+            # print( "corner.shape", corner.shape, ", corner=", corner  )
+            p = [corner[0], corner[1], 0]
+            # map corner point
+            newP = np.dot( M, np.array(p))
+            # print( "corner.shape", corner.shape, ", corner=", corner, "newP", newP  )
+            xmin = min( xmin, newP[0])            
+            ymin = min( ymin, newP[1])            
+            xmax = max( xmax, newP[0])            
+            ymax = max( ymax, newP[1])
+            
+        dsize = (int(xmax-xmin), int(ymax-ymin))
+        offset = (int(min(0,xmin)), int(min(0,ymin)))
+        # print( "dsize=", dsize )
+        return( dsize , offset )
+
+    
+    def offsetT( offset):
+        """@return 3x3 matrix tranformin image offset (x,y)"""
+        M = np.eye(3)
+        M[0,2] = -offset[0]
+        M[1,2] = -offset[1]
+        return( M )
+
+    # add possible rotation
+    if len(rots) == 2: rots = rots +(0,)
+    
+    # maps rots --> 2-Dtransformation matrix
+    rads =  [math.radians(r) for r in rots ]
+    M = eulerAnglesToRotationMatrix( rads )
+    # 2D transformation (ignore Z)
+    M[2] = [0,0,1]
+
+    # find target image size and offset of the image
+    dsize, offset = findDsize( boundingBox(img), M )
+
+    # translation matrix
+    T = offsetT( offset )
+
+    # perspective transformation 'M' and offset translation 'T'
+    dst = cv2.warpPerspective(img,np.dot(T, M),dsize)
+    return( dst )
+
+
+
+def brightness_image( img, adjust):
     """@return image brightness adjusted by adjustBrightness"""
     hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
     # cv2.add(hsv[:,:,2], adjustBrightness, dst=hsv[:,:,2])
     v =cv2.add(hsv[:,:,2], adjust)
     hsv[:,:,2] = v
     img  = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
-    return( img, boundingBox )
+    return( img )
 
 
-def gamma_image(image, boundingBox, gamma=1.0):
+def gamma_image(image, gamma=1.0):
 	# build a lookup table mapping the pixel values [0, 255] to
 	# their adjusted gamma values
 	invGamma = 1.0 / gamma
 	table = np.array([((i / 255.0) ** invGamma) * 255
 		for i in np.arange(0, 256)]).astype("uint8")
 	# apply gamma correction using the lookup table
-	return( cv2.LUT(image, table), boundingBox )
+	return( cv2.LUT(image, table) )
 
 # https://stackoverflow.com/questions/43892506/opencv-python-rotate-image-without-cropping-sides/47248339
 # rotating images while avoiding cropping the image.
 
-def rotate_image(mat, boundingBox, angle):
+def rotate_image(mat, angle):
     """
     Rotates an image (angle in degrees) and expands image to avoid cropping
     """
@@ -77,12 +163,13 @@ def rotate_image(mat, boundingBox, angle):
 
     # rotate image with the new bounds and translated rotation matrix
     rotated_mat = cv2.warpAffine(mat, rotation_mat, (bound_w, bound_h))
-    return( rotated_mat, boundingBox )
+    return( rotated_mat )
 
 # from  scipy import ndimage
 
 # def rotate_image2(img, angle):
 #     return( ndimage.rotate(img, angle))
+
 
 
 def mergeWithBackground( background, cropped, mask, pos=(0,0) ):
@@ -167,7 +254,7 @@ logging.debug( "simpleWrangles.keys()", simpleWrangles.keys())
     
 
 
-def wrangleImages( imgs, boundingBox, wrangles, wrangleDict=simpleWrangles ):
+def wrangleImages( imgs, wrangles, wrangleDict=simpleWrangles ):
     """Wrangle each 'img' in 'imgs' (note that imgs may be a list or a
     single image) using a random 'wrangler' in 'wrangles'
 
@@ -180,12 +267,12 @@ def wrangleImages( imgs, boundingBox, wrangles, wrangleDict=simpleWrangles ):
 
     """
 
-    def runWrangler( img, boundingBox, wrangleDef, wrangleDict ):
+    def runWrangler( img, wrangleDef, wrangleDict ):
         wrangleNames = wrangleDef if isinstance( wrangleDef, list) else [wrangleDef]
         for wrangleName in wrangleNames:
-            img, boundingBox = wrangleDict[wrangleName](img, boundingBox )
+            img = wrangleDict[wrangleName](img )
 
-        return( img, boundingBox )
+        return( img )
 
         
     retVal = imgs
@@ -196,12 +283,12 @@ def wrangleImages( imgs, boundingBox, wrangles, wrangleDict=simpleWrangles ):
         if isinstance(imgs, list):
             retVal = []
             for i in range(len(imgs)):
-                dst, boundingBox = runWrangler( imgs[i], boundingBox, wranglerDef, wrangleDict )
+                dst = runWrangler( imgs[i], wranglerDef, wrangleDict )
                 # dst = wrangler( imgs[i] )
                 retVal.append(dst)
             return( retVal, boundingBox )
         else:
-            retVal, boundingBox  = runWrangler( imgs, boundingBox,  wranglerDef, wrangleDict )
+            retVal  = runWrangler( imgs,  wranglerDef, wrangleDict )
             # retVal = wrangler( imgs  )
             return( retVal, boundingBox)
     return( (retVal, boundingBox) )
