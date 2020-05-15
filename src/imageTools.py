@@ -237,12 +237,12 @@ class Filters:
 
     
 simpleWrangles = {
-    "noop" : lambda img, boundingBox:  (img, boundingBox)
+    "noop" : lambda img :  (img)
 }
 
 def createLambda(  f, k ):
     """Short cut and create contexted for 'k'"""
-    return( lambda img, boundingBox: f( img, boundingBox, k) )
+    return( lambda img : f( img, k) )
 
 simpleWrangles.update({ "rotate{0}".format(k): createLambda( rotate_image, k ) for k in Filters.rotates() })
 simpleWrangles.update({ "resize{0}".format(k): createLambda( resize_image, k ) for k in Filters.resizes() })

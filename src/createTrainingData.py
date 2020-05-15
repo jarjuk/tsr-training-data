@@ -95,7 +95,7 @@ def yieldMergedImages( backgroundGen, classImagesList, wrangles=list(),
 
         # randomly wrangle of classImage  (=cropped and mask images)
         ((croppedResized, maskResized), _) = wrangleImages( [croppedResized,
-                                                        maskResized], boundingBox, wrangles)
+                                                        maskResized], wrangles)
         ## src.util.showImage( croppedResized, "croppedResized" )        
         
         # Find random position where to merge into
@@ -147,8 +147,7 @@ def createTestImage( mergedImage, indx, testSet, imgType="jpg", wrangles=list() 
 
     """
     mergedImage["testImage"], boundingBox = wrangleImages(
-        mergedImage['mergedImg'].copy(), mergedImage['boundingBox'],
-        wrangles )
+        mergedImage['mergedImg'].copy(), wrangles )
 
     # Generate unique name
     mergedImage["indx"] = indx
