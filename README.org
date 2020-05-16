@@ -9,26 +9,6 @@ detection system.  The images are intented to train YOLOV3 algorithm
 implementation in [[https://github.com/zzh8829/yolov3-tf2][zzh8829/yolov3-tf2]].
 
 :CONTENTS:
-- [[#architecture][Architecture]]
-- [[#getting-help][Getting help]]
-- [[#using-create-datapy][Using create-data.py]]
-  - [[#generate-example-test-images][Generate example test images]]
-  - [[#input-class-images-option-classimages][Input: Class images option classImages]]
-  - [[#input-background-images-option-backgrounds][Input: Background images option backgrounds]]
-  - [[#output-list-of-test-images-option-imagelist][Output: List of test images option imagelist]]
-  - [[#output-list-of-class-names-option-classes][Output: list of class names option classes]]
-  - [[#output-generated-test-images-options-images][Output: generated test images options images]]
-  - [[#output-generated-xml--annotations-options-annotations][Output: generated XML- annotations options annotations]]
-  - [[#convert-images-to-tensorflow-format][Convert images to tensorflow format]]
-  - [[#visualy-validate-tensorflow-conversion][Visualy validate tensorflow conversion]]
-- [[#generating-test-data][Generating test data]]
-  - [[#create-stage-directory-homestagetsrdtd][Create stage directory $HOME/stage/tsr/dtd]]
-  - [[#download-background-image-package-to-stage-directory][Download background image package to $STAGE directory]]
-  - [[#extract-image-package][Extract image package]]
-  - [[#generated-test-images-background-stagedtd][Generated test images background $STAGE/dtd]]
-  - [[#create-test-and-validation-sets][Create test and validation sets]]
-  - [[#convert-training-and-validation-data-sets-tensorflow-format][Convert training and validation data sets tensorflow format]]
-  - [[#visualy-validate-tensorflow-conversion][Visualy validate tensorflow conversion]]
 :END:
 
 ** Architecture
@@ -48,11 +28,12 @@ The picture below gives on overview of =tsr-training-data=:
         folder backgrounds <<binary>>
 
 
-         folder "Class images" as classimages <<binary>>
 
+         folder "Class images" as classimages <<binary>>
+         artifact filters
          component "create-data.py" as createTrainingData
 
-
+         filters -->  createTrainingData : randomize
 
 
       folder out {
@@ -113,12 +94,11 @@ The picture below gives on overview of =tsr-training-data=:
   #+RESULTS: architecture
   [[file:pics/architecture.jpg]]
 
-=tsr-training-data= merges class images and background images to
-create VOC Pascal dataset, which can be converted to tensforflow
-format and visually inspected using dockerized tools from
-[[https://github.com/zzh8829/yolov3-tf2][zzh8829/yolov3-tf2]]. After validation tensorflow format test images are
-passed further for yolo3 training.
-
+=tsr-training-data= merges randomly filtered /class images/ and
+/background images/ to create VOC Pascal dataset, which can be
+converted to tensforflow format and visually inspected using
+dockerized tools from [[https://github.com/zzh8829/yolov3-tf2][zzh8829/yolov3-tf2]]. After validation tensorflow
+format test images are passed further for yolo3 training.
 
 
 ** Getting help
@@ -565,6 +545,299 @@ Example annotation file =TSR-image00002.xml=
  [[file:out/tfData/visu-valset.jpg]]
 
 
+** Filters
+
+This chapter documents filter in =create-data.py= using tables with
+columns for
+- input parameters to filter
+- the result of filtering the image below using the filter parameters
+- mask for merging the filtering result with background
+
+ #+BEGIN_SRC python :eval no-export :results output raw :session *Python* :exports results
+   filter = lambda img: src.imageTools.resize( img, 200 )
+   imagePath = "Images/signs/50-sign-start.png"
+   picPath,maskPath = filterImage( imagePath,  filter, False )
+   print(picPath )
+
+ #+END_SRC
+
+ #+RESULTS:
+ [[file:./pics/50-sign-start.png]]
+
+
+#+BEGIN_SRC python :eval no-export :results output :noweb no :session *Python* :exports none
+  for moduleName in [ 'src.imageTools', "src.classImages"]:
+      if moduleName  in sys.modules:
+          del sys.modules[moduleName]
+
+  import src.util
+  import cv2
+  import os.path
+  import imutils
+  import src.imageTools
+  import src.classImages
+
+  def imageLink( imagePath ):
+      return( "[[file:./" + imagePath + "]]" )
+
+  def filterImage( imagePath, filter, filterMask, imageFile=None, maskFile=None, width =100 ):
+
+      # prepare image && mask for  filtering
+      img = cv2.imread( imagePath)
+      cropped,mask = src.classImages.maskImage(img)
+      if width is not None: 
+          img = imutils.resize( img, width=width)
+          mask = imutils.resize( mask, width=width)
+      img = filter( img )
+      if filterMask: mask = filter( mask )
+
+      if imageFile is None: imageFile = os.path.basename(imagePath)
+      if maskFile is None: maskFile = os.path.basename(imagePath) + "-mask"
+      picPath = os.path.join( "pics", imageFile )
+      cv2.imwrite( picPath, img )
+      maskPath = os.path.join( "pics", maskFile )
+      cv2.imwrite( picPath, img )
+      cv2.imwrite( maskPath, mask )
+      return( imageLink(picPath), imageLink(maskPath) )
+
+
+  def filterDocument( imagePath, filterName, filterTool, filterValues, filterMask=False, strValues=None ):
+      def printRow( col1, col2, col3,  sep="|" ):
+          if sep is not None: 
+              print( sep, col1, sep, col2, sep, col3, sep)
+          else:
+              print( col1, col2,  )
+
+      printRow( filterName, "Filtered image", "Mask" )
+      printRow( "|---+---+---|", "", "", sep = None )
+
+      for index, filterValue in enumerate(filterValues):
+          if  strValues is None:
+              strValue = str(filterValue)
+          else:
+              strValue = str( strValues[index])
+          imageFile =  filterName + strValue + ".png"
+          maskFile = filterName + strValue + "-mask.png"
+          imageLink, maskLink = filterImage(
+              imagePath,
+              lambda img: filterTool( img, filterValue), 
+              filterMask,
+              imageFile = imageFile,
+              maskFile = maskFile)
+
+          printRow( strValue, imageLink, maskLink )
+
+      printRow( "|---+---+---|", "", "", sep = None )
+
+#+END_SRC
+
+#+RESULTS:
+
+
+*** Blur
+
+ #+BEGIN_SRC python :eval no-export :results output raw :session *Python* :exports results
+   imagePath = "Images/signs/50-sign-start.png"
+   filterTool = src.imageTools.blur_image
+   filterValues = [ 1,3,5,10 ]
+
+   filterDocument( imagePath, "Blur", filterTool, filterValues )
+ #+END_SRC
+
+ #+RESULTS:
+ | Blur | Filtered image         | Mask                        |
+ |------+------------------------+-----------------------------|
+ |    1 | [[file:./pics/Blur1.png]]  | [[file:./pics/Blur1-mask.png]]  |
+ |    3 | [[file:./pics/Blur3.png]]  | [[file:./pics/Blur3-mask.png]]  |
+ |    5 | [[file:./pics/Blur5.png]]  | [[file:./pics/Blur5-mask.png]]  |
+ |   10 | [[file:./pics/Blur10.png]] | [[file:./pics/Blur10-mask.png]] |
+ |------+------------------------+-----------------------------|
+ Traceback (most recent call last):
+   File "<stdin>", line 1, in <module>
+   File "/tmp/babel-NCgRQ4/python-qs5Joz", line 5, in <module>
+     filterDocument( imagePath, "Blur", filterTool, filterValues )
+   File "/tmp/babel-NCgRQ4/python-1wsVUU", line 39, in filterDocument
+     printRow( "|---+---+---|", "", sep = None )
+ TypeError: printRow() missing 1 required positional argument: 'col3'
+
+
+
+*** Brightness
+
+ #+BEGIN_SRC python :eval no-export :results output raw :session *Python* :exports results
+   imagePath = "Images/signs/50-sign-start.png"
+   filterTool = src.imageTools.brightness_image
+   filterValues = [ -250, -200, -100, -50, 0, 50, 100, 200, 250 ]
+
+   filterDocument( imagePath, "Brightness", filterTool, filterValues )
+ #+END_SRC
+
+ #+RESULTS:
+ | Brightness | Filtered image                 | Mask                                |
+ |------------+--------------------------------+-------------------------------------|
+ |       -250 | [[file:./pics/Brightness-250.png]] | [[file:./pics/Brightness-250-mask.png]] |
+ |       -200 | [[file:./pics/Brightness-200.png]] | [[file:./pics/Brightness-200-mask.png]] |
+ |       -100 | [[file:./pics/Brightness-100.png]] | [[file:./pics/Brightness-100-mask.png]] |
+ |        -50 | [[file:./pics/Brightness-50.png]]  | [[file:./pics/Brightness-50-mask.png]]  |
+ |          0 | [[file:./pics/Brightness0.png]]    | [[file:./pics/Brightness0-mask.png]]    |
+ |         50 | [[file:./pics/Brightness50.png]]   | [[file:./pics/Brightness50-mask.png]]   |
+ |        100 | [[file:./pics/Brightness100.png]]  | [[file:./pics/Brightness100-mask.png]]  |
+ |        200 | [[file:./pics/Brightness200.png]]  | [[file:./pics/Brightness200-mask.png]]  |
+ |        250 | [[file:./pics/Brightness250.png]]  | [[file:./pics/Brightness250-mask.png]]  |
+ |------------+--------------------------------+-------------------------------------|
+
+
+
+
+
+*** Gamma
+
+ #+BEGIN_SRC python :eval no-export :results output raw :session *Python* :exports results
+   imagePath = "Images/signs/50-sign-start.png"
+   filterTool = src.imageTools.gamma_image
+   filterValues = [  -8, -4, -2, -1, 1, 2, 4, 8 ]
+
+   filterDocument( imagePath, "Gamma", filterTool, filterValues )
+ #+END_SRC
+
+ #+RESULTS:
+ | Gamma | Filtered image          | Mask                         |
+ |-------+-------------------------+------------------------------|
+ |    -8 | [[file:./pics/Gamma-8.png]] | [[file:./pics/Gamma-8-mask.png]] |
+ |    -4 | [[file:./pics/Gamma-4.png]] | [[file:./pics/Gamma-4-mask.png]] |
+ |    -2 | [[file:./pics/Gamma-2.png]] | [[file:./pics/Gamma-2-mask.png]] |
+ |    -1 | [[file:./pics/Gamma-1.png]] | [[file:./pics/Gamma-1-mask.png]] |
+ |     1 | [[file:./pics/Gamma1.png]]  | [[file:./pics/Gamma1-mask.png]]  |
+ |     2 | [[file:./pics/Gamma2.png]]  | [[file:./pics/Gamma2-mask.png]]  |
+ |     4 | [[file:./pics/Gamma4.png]]  | [[file:./pics/Gamma4-mask.png]]  |
+ |     8 | [[file:./pics/Gamma8.png]]  | [[file:./pics/Gamma8-mask.png]]  |
+ |-------+-------------------------+------------------------------|
+
+
+*** Rotate
+
+ #+BEGIN_SRC python :eval no-export :results output raw :session *Python* :exports results
+   imagePath = "Images/signs/50-sign-start.png"
+   filterTool = src.imageTools.rotate_image
+   filterValues = [ -10, -5, 0, 30 ]
+
+   filterDocument( imagePath, "Rotate", filterTool, filterValues, filterMask=True )
+ #+END_SRC
+
+ #+RESULTS:
+ | Rotate | Filtered image            | Mask                           |
+ |--------+---------------------------+--------------------------------|
+ |    -10 | [[file:./pics/Rotate-10.png]] | [[file:./pics/Rotate-10-mask.png]] |
+ |     -5 | [[file:./pics/Rotate-5.png]]  | [[file:./pics/Rotate-5-mask.png]]  |
+ |      0 | [[file:./pics/Rotate0.png]]   | [[file:./pics/Rotate0-mask.png]]   |
+ |     30 | [[file:./pics/Rotate30.png]]  | [[file:./pics/Rotate30-mask.png]]  |
+ |--------+---------------------------+--------------------------------|
+
+
+
+
+
+
+*** Perspective
+
+ #+BEGIN_SRC python :eval no-export :results output raw :session *Python* :exports results
+   for moduleName in [ 'src.imageTools']:
+       if moduleName  in sys.modules:
+           del sys.modules[moduleName]
+   import src.imageTools
+
+   imagePath = "Images/signs/50-sign-start.png"
+   filterTool = src.imageTools.perspective_image
+
+   filterValues = [ 
+       (0,-45), (0,45)
+       , (-45,-0), (45,0)
+       , (45,45), (-45,45)
+   ]
+
+   filterDocument( imagePath, "Perspective", filterTool, filterValues, filterMask=True )
+
+
+ #+END_SRC
+
+ #+RESULTS:
+ | Perspective | Filtered image                       | Mask                                      |
+ |-------------+--------------------------------------+-------------------------------------------|
+ | (0, -45)    | [[file:./pics/Perspective(0, -45).png]]  | [[file:./pics/Perspective(0, -45)-mask.png]]  |
+ | (0, 45)     | [[file:./pics/Perspective(0, 45).png]]   | [[file:./pics/Perspective(0, 45)-mask.png]]   |
+ | (-45, 0)    | [[file:./pics/Perspective(-45, 0).png]]  | [[file:./pics/Perspective(-45, 0)-mask.png]]  |
+ | (45, 0)     | [[file:./pics/Perspective(45, 0).png]]   | [[file:./pics/Perspective(45, 0)-mask.png]]   |
+ | (45, 45)    | [[file:./pics/Perspective(45, 45).png]]  | [[file:./pics/Perspective(45, 45)-mask.png]]  |
+ | (-45, 45)   | [[file:./pics/Perspective(-45, 45).png]] | [[file:./pics/Perspective(-45, 45)-mask.png]] |
+ |-------------+--------------------------------------+-------------------------------------------|
+
+
+
+
+*** Combined filter
+
+ #+BEGIN_SRC python :eval no-export :results output raw :session *Python* :exports results
+   for moduleName in [ 'src.imageTools']:
+       if moduleName  in sys.modules:
+           del sys.modules[moduleName]
+   import src.imageTools
+
+   funcs = {
+      "blur" : src.imageTools.blur_image,
+       "rotate": src.imageTools.rotate_image,
+       "perspective": src.imageTools.perspective_image,
+       "brightness": src.imageTools.brightness_image
+   }
+
+   #
+
+
+
+   imagePath = "Images/signs/50-sign-start.png"
+
+   filterValues = [
+        [["blur", 8], ["rotate", 60]]
+        , [ ["rotate", 60]]
+        , [ ["blur", 8]]
+       , [["blur", 8], ["rotate", 60], ["perspective", (10,45)]]
+       , [["blur", 8], ["perspective", (10,45)], ["rotate", 60]]
+       , [["brightness", -100],  ["perspective", (10,45)]]
+
+   ]
+
+
+   def createfilterLambda( funcName, params ):
+       return( lambda img : funcs[funcName](img, params ) )
+
+
+   lamdaFuncs = [[ createfilterLambda( funcName, params) for funcName, params in entry ]
+                 for entry in filterValues ]
+
+   strValues = [ ", ".join(["{0}({1})".format(funcName, str(params) ) for funcName, params in entry] )  for entry in filterValues 
+   ]
+   strValues
+
+
+
+   # filterDocument( imagePath, "Multifilter", filterTool, filterValuesPure, filterMask=True )
+   filterDocument( imagePath, "Multifilter", filterTool, lamdaFuncs, filterMask=True, strValues=strValues )
+
+
+ #+END_SRC
+
+ #+RESULTS:
+ | Multifilter                                | Filtered image                                                        | Mask                                                                       |
+ |--------------------------------------------+-----------------------------------------------------------------------+----------------------------------------------------------------------------|
+ | blur(8), rotate(60)                        | [[file:./pics/Multifilterblur(8), rotate(60).png]]                        | [[file:./pics/Multifilterblur(8), rotate(60)-mask.png]]                        |
+ | rotate(60)                                 | [[file:./pics/Multifilterrotate(60).png]]                                 | [[file:./pics/Multifilterrotate(60)-mask.png]]                                 |
+ | blur(8)                                    | [[file:./pics/Multifilterblur(8).png]]                                    | [[file:./pics/Multifilterblur(8)-mask.png]]                                    |
+ | blur(8), rotate(60), perspective((10, 45)) | [[file:./pics/Multifilterblur(8), rotate(60), perspective((10, 45)).png]] | [[file:./pics/Multifilterblur(8), rotate(60), perspective((10, 45))-mask.png]] |
+ | blur(8), perspective((10, 45)), rotate(60) | [[file:./pics/Multifilterblur(8), perspective((10, 45)), rotate(60).png]] | [[file:./pics/Multifilterblur(8), perspective((10, 45)), rotate(60)-mask.png]] |
+ | brightness(-100), perspective((10, 45))    | [[file:./pics/Multifilterbrightness(-100), perspective((10, 45)).png]]    | [[file:./pics/Multifilterbrightness(-100), perspective((10, 45))-mask.png]]    |
+ |--------------------------------------------+-----------------------------------------------------------------------+----------------------------------------------------------------------------|
+
+
+
 ** Generating test data
 
 *** Create stage directory =$HOME/stage/tsr/dtd= 
@@ -625,9 +898,9 @@ ls -ltr $STAGE
 
 
 *** Extract image package
-:PROPERTIES:
-:header-args:sh: :dir  ~/stage/tsr/dtd
-:END:
+    :PROPERTIES:
+    :header-args:sh: :dir  ~/stage/tsr/dtd
+    :END:
 
 #+BEGIN_SRC sh :eval no-export :results output
 tar xfz dtd-r1.0.1.tar.gz 
