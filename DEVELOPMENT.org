@@ -42,9 +42,9 @@ releaseit.sh  create_release commit current VERSION commit tag 2>&1 || true
 #+END_SRC
 
 #+RESULTS:
-: [dev 6789bff] ## 0.1.4/20200518-14:16:45
+: [dev 78b1895] ## 0.1.5/20200518-22:14:11
 :  1 file changed, 1 insertion(+), 1 deletion(-)
-: [dev 627d157] ## 0.1.4/20200518-14:16:45
+: [dev a2a33c8] ## 0.1.5/20200518-22:14:11
 :  1 file changed, 1 insertion(+), 1 deletion(-)
 
 
