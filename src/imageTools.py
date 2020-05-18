@@ -4,7 +4,7 @@ import numpy as np
 import imutils
 import math
 
-import functools
+# import functools
 
 from absl import logging
 
@@ -30,22 +30,31 @@ def resize( img, width):
     img = imutils.resize( img, width=width)
     return( img )
 
-def resize_image( img, width ):
+def resize_image( img, width, mask=None ):
     """@return resized 'img' to 'width', aspect ratio kept"""
     img = imutils.resize( img, width=width)
-    return(  imutils.resize( img, width=width) )
-
-def multi_filter( img, funcs ):
-    return( functools.reduce( lambda img, f: f(img), funcs, img ) )
+    if mask is not None: mask = imutils.resize( mask, width=width)
+    return( img, mask )
 
 
-def blur_image( img, kernelSize=5):
-    """@return blulled 'img'"""
+# def multi_filter_old( img, funcs, mask=None ):
+#     return( functools.reduce( lambda imgMask, f  = None: f(imgMask[0], mask=imgMask[1] ), funcs, (img, mask) ) )
+
+def multi_filter( img, funcs, mask=None ):
+    filters = iter(funcs)
+    for filter in filters:
+        img,mask = filter(img, mask)
+    return( img, mask)
+
+
+def blur_image( img, kernelSize=5, mask=None):
+    """@return blurred 'img' and 'mask' with no change"""
     dst = cv2.blur(img,(kernelSize,kernelSize))
-    return( dst )
+    ## No need to modify mask for blur
+    return( dst, mask )
     
 
-def perspective_image( img, rots):
+def perspective_image( img, rots, mask = None):
     """
     @param rots tuple(int, int)
     """
@@ -113,35 +122,39 @@ def perspective_image( img, rots):
 
     # perspective transformation 'M' and offset translation 'T'
     dst = cv2.warpPerspective(img,np.dot(T, M),dsize)
-    return( dst )
+    if mask is not None: mask = cv2.warpPerspective(mask,np.dot(T, M),dsize)
+    return( dst, mask )
 
 
 
-def brightness_image( img, adjust):
-    """@return image brightness adjusted by adjustBrightness"""
+def brightness_image( img, adjust, mask=None):
+    """@return image brightness adjusted by adjustBrightness and 'mask'
+    with no change"""
     hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
     # cv2.add(hsv[:,:,2], adjustBrightness, dst=hsv[:,:,2])
     v =cv2.add(hsv[:,:,2], adjust)
     hsv[:,:,2] = v
     img  = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
-    return( img )
+    return( img, mask )
 
 
-def gamma_image(image, gamma=1.0):
-	# build a lookup table mapping the pixel values [0, 255] to
-	# their adjusted gamma values
-	invGamma = 1.0 / gamma
-	table = np.array([((i / 255.0) ** invGamma) * 255
-		for i in np.arange(0, 256)]).astype("uint8")
-	# apply gamma correction using the lookup table
-	return( cv2.LUT(image, table) )
+def gamma_image(image, gamma=1.0, mask=None):
+    # build a lookup table mapping the pixel values [0, 255] to
+    # their adjusted gamma values
+    invGamma = 1.0 / gamma
+    table = np.array([0] + [((i / 255.0) ** invGamma) * 255
+		      for i in np.arange(1, 256)]).astype("uint8")
+    # apply gamma correction using the lookup table, mask no channge
+    return( cv2.LUT(image, table), mask )
 
 # https://stackoverflow.com/questions/43892506/opencv-python-rotate-image-without-cropping-sides/47248339
 # rotating images while avoiding cropping the image.
 
-def rotate_image(mat, angle):
-    """
-    Rotates an image (angle in degrees) and expands image to avoid cropping
+def rotate_image(mat, angle, mask=None):
+    """Rotates an image (angle in degrees) and expands image to avoid cropping
+
+    @return (mat, mask) both rotated by angle
+
     """
 
     height, width = mat.shape[:2] # image shape has 3 dimensions
@@ -163,7 +176,10 @@ def rotate_image(mat, angle):
 
     # rotate image with the new bounds and translated rotation matrix
     rotated_mat = cv2.warpAffine(mat, rotation_mat, (bound_w, bound_h))
-    return( rotated_mat )
+    
+    # Rotat mask (if given)
+    if mask is not None: mask = cv2.warpAffine(mask, rotation_mat, (bound_w, bound_h))
+    return( rotated_mat, mask )
 
 # from  scipy import ndimage
 
@@ -237,12 +253,12 @@ class Filters:
 
     
 simpleWrangles = {
-    "noop" : lambda img :  (img)
+    "noop" : lambda img, mask :  (img, mask)
 }
 
 def createLambda(  f, k ):
     """Short cut and create contexted for 'k'"""
-    return( lambda img : f( img, k) )
+    return( lambda img, mask : f( img, k, mask = mask ) )
 
 simpleWrangles.update({ "rotate{0}".format(k): createLambda( rotate_image, k ) for k in Filters.rotates() })
 simpleWrangles.update({ "resize{0}".format(k): createLambda( resize_image, k ) for k in Filters.resizes() })
@@ -254,45 +270,33 @@ logging.debug( "simpleWrangles.keys()", simpleWrangles.keys())
     
 
 
+def wrangleImages( img, mask, wrangles, wrangleDict=simpleWrangles ):
+    """Wrangle each 'img' and (mask) using using a random 'wrangler' in
+    'wrangles'
 
-def wrangleImages( imgs, wrangles, wrangleDict=simpleWrangles ):
-    """Wrangle each 'img' in 'imgs' (note that imgs may be a list or a
-    single image) using a random 'wrangler' in 'wrangles'
 
-    @param imgs is simple image or list of images
-
-    @param wranles array[string|[string]] (=array of strings or array
+    @param wrangles array[string|[string]] (=array of strings or array
     of array of strings)
 
     @return wrangled 'imgs'
 
     """
 
-    def runWrangler( img, wrangleDef, wrangleDict ):
+    def runWrangler( img, mask, wrangleDef, wrangleDict ):
         wrangleNames = wrangleDef if isinstance( wrangleDef, list) else [wrangleDef]
         for wrangleName in wrangleNames:
-            img = wrangleDict[wrangleName](img )
+            img, mask = wrangleDict[wrangleName](img, mask )
 
-        return( img )
+        return( img, mask )
 
         
-    retVal = imgs
     if  len(wrangles) > 0:
         indx = random.choice(range(len(wrangles)))
         wranglerDef= wrangles[indx]
         # wrangler = wrangleDict[wranglerName]
-        if isinstance(imgs, list):
-            retVal = []
-            for i in range(len(imgs)):
-                dst = runWrangler( imgs[i], wranglerDef, wrangleDict )
-                # dst = wrangler( imgs[i] )
-                retVal.append(dst)
-            return( retVal, boundingBox )
-        else:
-            retVal  = runWrangler( imgs,  wranglerDef, wrangleDict )
-            # retVal = wrangler( imgs  )
-            return( retVal, boundingBox)
-    return( (retVal, boundingBox) )
+        img, mask  = runWrangler( img,  mask, wranglerDef, wrangleDict )
+        # retVal = wrangler( imgs  )
+    return( img, mask )
 
 
 

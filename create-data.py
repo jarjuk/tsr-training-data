@@ -2,6 +2,7 @@ import itertools
 import os.path
 from absl import app, flags, logging
 from absl.flags import FLAGS
+import random
 import cv2
 
 import src.createTrainingData
@@ -10,6 +11,7 @@ import src.classImages
 
 # control
 flags.DEFINE_integer('debug', -1, '-3=fatal, -1=warning, 0=info, 1=debug')
+flags.DEFINE_integer('seed', None, 'Random seed (default None)')
 flags.DEFINE_boolean('interactive', False, 'show training data')
 flags.DEFINE_integer("maxImages", -1, "Number of images to generate, -1=proces all background images")
 flags.DEFINE_string( "imagelistTemplate",
@@ -44,8 +46,11 @@ def ensure_filedir(file_path):
         os.makedirs(directory)        
 
 def main(_argv):
+    
 
     logging.set_verbosity(FLAGS.debug)
+    random.seed( FLAGS.seed )
+    logging.info( "Random seed {0}".format(FLAGS.seed))
 
     # Default values
     if FLAGS.annotations is None:

@@ -144,6 +144,8 @@ create-data.py:
   --maxImages: Number of images to generate, -1=proces all background images
     (default: '-1')
     (an integer)
+  --seed: Random seed (default None)
+    (an integer)
   --testSet: Test set name (=folder in output -directory)
     (default: 'TSR1')
 
@@ -163,7 +165,7 @@ rm -rf out/tsrVOC
 *** Generate example test images 
 
 Running =create-data.py= without any options generates example test
-images.
+images. For a more realistic example refer to [[file:yolov3-data.org]]
 
 #+name: run-default
 #+BEGIN_SRC sh :eval no-export :results output :exports both
@@ -173,9 +175,6 @@ python  create-data.py
 The output explains the generation run
 
 #+RESULTS: run-default
-: Created 7 test images in 'out/tsrVOC/JPEGImages' with annotations in 'out/tsrVOC/Annotations' folders
-:  class names in 'out/tsrVOC/classes.txt' and list of images 'out/tsrVOC/imagelist.txt'
-:  input from from class images 'Images/signs' and backgrounds'backgrounds' folders
 
 
 *** Input: Class images option =classImages= 
@@ -268,8 +267,8 @@ below:
 *** Output: List of test images option =imagelist=
 
 Names of generated test image files are written into file pointed by
-=imagelist= option. Format of line is given by =imagelistTemplate=
--option.  
+=imagelist= option. Format of the line is given by =imagelistTemplate=
+-option.
 
 For the example the tool outputs
 #+BEGIN_SRC sh :eval no-export :results output :exports results
@@ -297,13 +296,16 @@ For the example run class names are:
 cat out/tsrVOC/classes.txt
 #+END_SRC
 
-
 #+RESULTS:
-: 20-start
+: 40-end
 : 50-start
-: 70-start
+: 60-end
 : 30-start
+: 60-start
+: urban-start
 : 30-end
+
+
 
 
 *** Output: generated test images options =images=
@@ -547,22 +549,17 @@ Example annotation file =TSR-image00002.xml=
 
 ** Filters
 
-This chapter documents filter in =create-data.py= using tables with
+This chapter documents filters in =create-data.py= using tables with
 columns for
-- input parameters to filter
-- the result of filtering the image below using the filter parameters
-- mask for merging the filtering result with background
+- filter input parameters
+- the result of filtering image shown below
+- and the associated mask, which filter also produces
 
- #+BEGIN_SRC python :eval no-export :results output raw :session *Python* :exports results
-   filter = lambda img: src.imageTools.resize( img, 200 )
-   imagePath = "Images/signs/50-sign-start.png"
-   picPath,maskPath = filterImage( imagePath,  filter, False )
-   print(picPath )
+The unfiltered 200 pixel wide image 
 
- #+END_SRC
 
- #+RESULTS:
- [[file:./pics/50-sign-start.png]]
+ #+RESULTS: filtered-image
+ [[file:./pics/example.jpg]]
 
 
 #+BEGIN_SRC python :eval no-export :results output :noweb no :session *Python* :exports none
@@ -584,20 +581,19 @@ columns for
 
       # prepare image && mask for  filtering
       img = cv2.imread( imagePath)
-      cropped,mask = src.classImages.maskImage(img)
+      cropped, mask = src.classImages.maskImage(img)
       if width is not None: 
-          img = imutils.resize( img, width=width)
-          mask = imutils.resize( mask, width=width)
-      img = filter( img )
-      if filterMask: mask = filter( mask )
+          img = imutils.resize( img, width=width )
+          mask = imutils.resize( mask, width=width )
+      img, filteredMask = filter( img, mask=mask )
+      ## if filterMask: mask = filter( mask )
 
       if imageFile is None: imageFile = os.path.basename(imagePath)
       if maskFile is None: maskFile = os.path.basename(imagePath) + "-mask"
       picPath = os.path.join( "pics", imageFile )
       cv2.imwrite( picPath, img )
       maskPath = os.path.join( "pics", maskFile )
-      cv2.imwrite( picPath, img )
-      cv2.imwrite( maskPath, mask )
+      if filteredMask is not None: cv2.imwrite( maskPath, filteredMask )
       return( imageLink(picPath), imageLink(maskPath) )
 
 
@@ -620,7 +616,7 @@ columns for
           maskFile = filterName + strValue + "-mask.png"
           imageLink, maskLink = filterImage(
               imagePath,
-              lambda img: filterTool( img, filterValue), 
+              lambda img, mask=None: filterTool( img, filterValue, mask=mask ), 
               filterMask,
               imageFile = imageFile,
               maskFile = maskFile)
@@ -630,6 +626,18 @@ columns for
       printRow( "|---+---+---|", "", "", sep = None )
 
 #+END_SRC
+
+#+RESULTS:
+
+
+ #+name: filtered-image
+ #+BEGIN_SRC python :eval no-export :results output raw :session *Python* :exports results
+   imagePath = "Images/signs/50-sign-start.png"
+   filter = lambda img, mask: src.imageTools.resize_image( img, 200, mask=None )
+   picPath,_ = filterImage( imagePath, filter, False, imageFile="example.jpg" )
+   print(picPath )
+
+ #+END_SRC
 
 #+RESULTS:
 
@@ -652,14 +660,6 @@ columns for
  |    5 | [[file:./pics/Blur5.png]]  | [[file:./pics/Blur5-mask.png]]  |
  |   10 | [[file:./pics/Blur10.png]] | [[file:./pics/Blur10-mask.png]] |
  |------+------------------------+-----------------------------|
- Traceback (most recent call last):
-   File "<stdin>", line 1, in <module>
-   File "/tmp/babel-NCgRQ4/python-qs5Joz", line 5, in <module>
-     filterDocument( imagePath, "Blur", filterTool, filterValues )
-   File "/tmp/babel-NCgRQ4/python-1wsVUU", line 39, in filterDocument
-     printRow( "|---+---+---|", "", sep = None )
- TypeError: printRow() missing 1 required positional argument: 'col3'
-
 
 
 *** Brightness
@@ -687,15 +687,12 @@ columns for
  |------------+--------------------------------+-------------------------------------|
 
 
-
-
-
 *** Gamma
 
  #+BEGIN_SRC python :eval no-export :results output raw :session *Python* :exports results
    imagePath = "Images/signs/50-sign-start.png"
    filterTool = src.imageTools.gamma_image
-   filterValues = [  -8, -4, -2, -1, 1, 2, 4, 8 ]
+   filterValues = [  -4, -2, -1, 1, 2, 4 ]
 
    filterDocument( imagePath, "Gamma", filterTool, filterValues )
  #+END_SRC
@@ -703,15 +700,32 @@ columns for
  #+RESULTS:
  | Gamma | Filtered image          | Mask                         |
  |-------+-------------------------+------------------------------|
- |    -8 | [[file:./pics/Gamma-8.png]] | [[file:./pics/Gamma-8-mask.png]] |
  |    -4 | [[file:./pics/Gamma-4.png]] | [[file:./pics/Gamma-4-mask.png]] |
  |    -2 | [[file:./pics/Gamma-2.png]] | [[file:./pics/Gamma-2-mask.png]] |
  |    -1 | [[file:./pics/Gamma-1.png]] | [[file:./pics/Gamma-1-mask.png]] |
  |     1 | [[file:./pics/Gamma1.png]]  | [[file:./pics/Gamma1-mask.png]]  |
  |     2 | [[file:./pics/Gamma2.png]]  | [[file:./pics/Gamma2-mask.png]]  |
  |     4 | [[file:./pics/Gamma4.png]]  | [[file:./pics/Gamma4-mask.png]]  |
- |     8 | [[file:./pics/Gamma8.png]]  | [[file:./pics/Gamma8-mask.png]]  |
  |-------+-------------------------+------------------------------|
+
+
+*** Resize
+
+ #+BEGIN_SRC python :eval no-export :results output raw :session *Python* :exports results
+   imagePath = "Images/signs/50-sign-start.png"
+   filterTool = src.imageTools.resize_image
+   filterValues = [ 20,  50, 100 ]
+
+   filterDocument( imagePath, "Resize", filterTool, filterValues, filterMask=True )
+ #+END_SRC
+
+ #+RESULTS:
+ | Resize | Filtered image            | Mask                           |
+ |--------+---------------------------+--------------------------------|
+ |     20 | [[file:./pics/Resize20.png]]  | [[file:./pics/Resize20-mask.png]]  |
+ |     50 | [[file:./pics/Resize50.png]]  | [[file:./pics/Resize50-mask.png]]  |
+ |    100 | [[file:./pics/Resize100.png]] | [[file:./pics/Resize100-mask.png]] |
+ |--------+---------------------------+--------------------------------|
 
 
 *** Rotate
@@ -733,9 +747,25 @@ columns for
  |     30 | [[file:./pics/Rotate30.png]]  | [[file:./pics/Rotate30-mask.png]]  |
  |--------+---------------------------+--------------------------------|
 
+*Notice*, how rotating a does not change the white circle in the mask
+aboveb, and how the mask size changes as rectangular image is
+rotated. The mask for a rectangular object, shows the effect of
+rotation also on the white area.
 
+ #+BEGIN_SRC python :eval no-export :results output raw :session *Python* :exports results
+   imagePath = "Images/signs/urban-area-end.png"
+   filterTool = src.imageTools.rotate_image
+   filterValues = [ -15, 45 ]
 
+   filterDocument( imagePath, "Rotate", filterTool, filterValues, filterMask=True )
+ #+END_SRC
 
+ #+RESULTS:
+ | Rotate | Filtered image            | Mask                           |
+ |--------+---------------------------+--------------------------------|
+ |    -15 | [[file:./pics/Rotate-15.png]] | [[file:./pics/Rotate-15-mask.png]] |
+ |     45 | [[file:./pics/Rotate45.png]]  | [[file:./pics/Rotate45-mask.png]]  |
+ |--------+---------------------------+--------------------------------|
 
 
 *** Perspective
@@ -772,8 +802,6 @@ columns for
  |-------------+--------------------------------------+-------------------------------------------|
 
 
-
-
 *** Combined filter
 
  #+BEGIN_SRC python :eval no-export :results output raw :session *Python* :exports results
@@ -807,10 +835,10 @@ columns for
 
 
    def createfilterLambda( funcName, params ):
-       return( lambda img : funcs[funcName](img, params ) )
+       return( lambda img, mask : funcs[funcName]( img, params, mask=mask ) )
 
 
-   lamdaFuncs = [[ createfilterLambda( funcName, params) for funcName, params in entry ]
+   lamdaFuncs = [[ createfilterLambda( funcName, params ) for funcName, params in entry ]
                  for entry in filterValues ]
 
    strValues = [ ", ".join(["{0}({1})".format(funcName, str(params) ) for funcName, params in entry] )  for entry in filterValues 
@@ -820,342 +848,22 @@ columns for
 
 
    # filterDocument( imagePath, "Multifilter", filterTool, filterValuesPure, filterMask=True )
-   filterDocument( imagePath, "Multifilter", filterTool, lamdaFuncs, filterMask=True, strValues=strValues )
+   filterTool = src.imageTools.multi_filter
+   filterDocument( imagePath, " Multifilter", filterTool, lamdaFuncs, filterMask=True, strValues=strValues )
 
 
  #+END_SRC
 
  #+RESULTS:
- | Multifilter                                | Filtered image                                                        | Mask                                                                       |
- |--------------------------------------------+-----------------------------------------------------------------------+----------------------------------------------------------------------------|
- | blur(8), rotate(60)                        | [[file:./pics/Multifilterblur(8), rotate(60).png]]                        | [[file:./pics/Multifilterblur(8), rotate(60)-mask.png]]                        |
- | rotate(60)                                 | [[file:./pics/Multifilterrotate(60).png]]                                 | [[file:./pics/Multifilterrotate(60)-mask.png]]                                 |
- | blur(8)                                    | [[file:./pics/Multifilterblur(8).png]]                                    | [[file:./pics/Multifilterblur(8)-mask.png]]                                    |
- | blur(8), rotate(60), perspective((10, 45)) | [[file:./pics/Multifilterblur(8), rotate(60), perspective((10, 45)).png]] | [[file:./pics/Multifilterblur(8), rotate(60), perspective((10, 45))-mask.png]] |
- | blur(8), perspective((10, 45)), rotate(60) | [[file:./pics/Multifilterblur(8), perspective((10, 45)), rotate(60).png]] | [[file:./pics/Multifilterblur(8), perspective((10, 45)), rotate(60)-mask.png]] |
- | brightness(-100), perspective((10, 45))    | [[file:./pics/Multifilterbrightness(-100), perspective((10, 45)).png]]    | [[file:./pics/Multifilterbrightness(-100), perspective((10, 45))-mask.png]]    |
- |--------------------------------------------+-----------------------------------------------------------------------+----------------------------------------------------------------------------|
-
-
-
-** Generating test data
-
-*** Create stage directory =$HOME/stage/tsr/dtd= 
-
-This example uses stage directory 
-
-#+name: stagedirectory
-#+begin_example
-$HOME/stage/tsr/dtd
-#+end_example
-
-#+name: stage
-#+BEGIN_SRC python :eval no-export  :noweb no :var stage=stagedirectory  :exports none  :exports none
-import os
-return os.path.expandvars(stage)
-#+END_SRC
-
-#+RESULTS: stage
-: /home/jj/stage/tsr/dtd2
-
-Set environment variable =$STAGE=
-
-#+BEGIN_SRC sh :eval no-export :results output :var stage=stagedirectory :exports results
-echo export STAGE=$stage
-#+END_SRC
-
-#+RESULTS:
-: export STAGE=$HOME/stage/tsr/dtd
-
-
-Create stage directory
-
-#+BEGIN_SRC sh :eval no-export :results output :var STAGE=stage :exports code
-mkdir -p $STAGE
-#+END_SRC
-
-#+RESULTS:
-
-
-*** Download background image package to $STAGE directory
-
-#+BEGIN_SRC sh :eval no-export :results output :var STAGE=stage
-cd $STAGE
-wget https://www.robots.ox.ac.uk/~vgg/data/dtd/download/dtd-r1.0.1.tar.gz
-#+END_SRC
-
-#+RESULTS:
-
-Show the downloaded package
-
-#+BEGIN_SRC sh :eval no-export :results output :exports both :var STAGE=stage
-ls -ltr $STAGE
-#+END_SRC
-
-#+RESULTS:
-: total 610592
-: -rw-rw-r-- 1 jj jj 625239812 joulu 17  2014 dtd-r1.0.1.tar.gz
-
-
-*** Extract image package
-    :PROPERTIES:
-    :header-args:sh: :dir  ~/stage/tsr/dtd
-    :END:
-
-#+BEGIN_SRC sh :eval no-export :results output
-tar xfz dtd-r1.0.1.tar.gz 
-#+END_SRC
-
-#+RESULTS:
-
-Inspect =dtd= directory, which was extracted
-
-#+BEGIN_SRC sh :eval no-export :results output
-du dtd
-#+END_SRC
-
-#+RESULTS:
-#+begin_example
-4852	dtd/images/crystalline
-19112	dtd/images/smeared
-9568	dtd/images/freckled
-13032	dtd/images/meshed
-5644	dtd/images/stained
-12384	dtd/images/grooved
-16880	dtd/images/matted
-23672	dtd/images/frilly
-8040	dtd/images/fibrous
-24736	dtd/images/woven
-16860	dtd/images/cobwebbed
-22604	dtd/images/zigzagged
-8900	dtd/images/chequered
-6100	dtd/images/scaly
-11892	dtd/images/perforated
-6212	dtd/images/bumpy
-4192	dtd/images/studded
-17056	dtd/images/flecked
-19200	dtd/images/sprinkled
-8568	dtd/images/bubbly
-20052	dtd/images/pitted
-8304	dtd/images/interlaced
-23640	dtd/images/spiralled
-6708	dtd/images/gauzy
-21668	dtd/images/cracked
-13832	dtd/images/honeycombed
-10480	dtd/images/paisley
-18028	dtd/images/wrinkled
-11696	dtd/images/banded
-13984	dtd/images/potholed
-12988	dtd/images/marbled
-4300	dtd/images/striped
-9268	dtd/images/polka-dotted
-13916	dtd/images/stratified
-7020	dtd/images/waffled
-8724	dtd/images/pleated
-14592	dtd/images/swirly
-10988	dtd/images/dotted
-13648	dtd/images/veined
-15860	dtd/images/porous
-19612	dtd/images/grid
-26476	dtd/images/lacelike
-21320	dtd/images/blotchy
-6128	dtd/images/braided
-9896	dtd/images/knitted
-14732	dtd/images/crosshatched
-11116	dtd/images/lined
-628484	dtd/images
-1648	dtd/labels
-36	dtd/imdb
-630172	dtd
-#+end_example
-
-Remove downloaded image package  =dtd-r1.0.1.tar.gz=  to waste space
-
-#+BEGIN_SRC sh :eval no-export :results output
-rm -f xfz dtd-r1.0.1.tar.gz 
-#+END_SRC
-
-#+RESULTS:
-
-
-*** Generated test images background =$STAGE/dtd=
-
-#+name: run-dtd
-#+BEGIN_SRC sh :eval no-export :results output :exports both :var STAGE=stage
-python  create-data.py \
-      --annotations $STAGE/tsrVOC/Annotations \
-      --images $STAGE/tsrVOC/JPEGImages \
-      --backgrounds $STAGE/dtd  \
-      --classes $STAGE/tsrVOC/classes.txt \
-      --imagelist $STAGE/tsrVOC/imagelist.txt
-#+END_SRC
-
-#+RESULTS: run-dtd
-: Created 5640 test images in '/home/jj/stage/tsr/dtd/tsrVOC/JPEGImages' with annotations in '/home/jj/stage/tsr/dtd/tsrVOC/Annotations' folders
-:  class names in '/home/jj/stage/tsr/dtd/tsrVOC/classes.txt' and list of images '/home/jj/stage/tsr/dtd/tsrVOC/imagelist.txt'
-:  input from from class images 'Images/signs' and backgrounds'/home/jj/stage/tsr/dtd/dtd' folders
-
-
-*** Create test and validation sets
-
-Randomize lines in image files =imagelist.txt=
-
-#+BEGIN_SRC sh :eval no-export :results output :var STAGE=stage
-shuf $STAGE/tsrVOC/imagelist.txt > $STAGE/tsrVOC/imagelist-shuffed.txt 
-#+END_SRC
-
-#+RESULTS:
-
-Validate that line count =5640= in =imagelist-shuffed.txt= matches the
-line count of the original =imagelist.txt= file:
-
-#+BEGIN_SRC sh :eval no-export :results output :var STAGE=stage :exporst both
-wc -l $STAGE/tsrVOC/imagelist.txt $STAGE/tsrVOC/imagelist-shuffed.txt
-#+END_SRC
-
-#+RESULTS:
-:   5640 /home/jj/stage/tsr/dtd/tsrVOC/imagelist.txt
-:   5640 /home/jj/stage/tsr/dtd/tsrVOC/imagelist-shuffed.txt
-:  11280 total
-
-Take first 20% (1128) lines to validation and rest of the file 80%
-(4512) to training
-
-#+BEGIN_SRC sh :eval no-export :results output :var STAGE=stage
-mkdir -p  $STAGE/tsrVOC/ImageSets/Main
-head -1128 $STAGE/tsrVOC/imagelist-shuffed.txt > $STAGE/tsrVOC/ImageSets/Main/aeroplane_val.txt
-tail -4512 $STAGE/tsrVOC/imagelist-shuffed.txt > $STAGE/tsrVOC/ImageSets/Main/aeroplane_train.txt
-#+END_SRC
-
-#+RESULTS:
-
-Validate that exactly =5640= lines are in validation and training set files
-
-#+BEGIN_SRC sh :eval no-export :results output :var STAGE=stage :export both
-wc  -l $STAGE/tsrVOC/ImageSets/Main/*
-#+END_SRC
-
-#+RESULTS:
-:   4512 /home/jj/stage/tsr/dtd/tsrVOC/ImageSets/Main/aeroplane_train.txt
-:   1128 /home/jj/stage/tsr/dtd/tsrVOC/ImageSets/Main/aeroplane_val.txt
-:   5640 total
-
-
-*** Convert training and validation data sets tensorflow format
-
-Create directory where tensorflow data files will be created
-
-#+BEGIN_SRC sh :eval no-export :results output :var STAGE=stage
-mkdir $STAGE/tfData
-#+END_SRC
-
-#+RESULTS:
-
-Convert training data under =$STAGE/out/tsrVOC= directory 
-
- #+BEGIN_SRC sh :eval no-export :results output :var TAG=tag-number :var STAGE=stage
-   docker run \
-        --user $(id -u):$(id -g) \
-        --workdir /yolov3-tf2 \
-        --volume $STAGE/tsrVOC/:/yolov3-tf2/tsrVOC \
-        --volume $STAGE/tfData/:/yolov3-tf2/tfData \
-        --volume="/etc/passwd:/etc/passwd:ro" \
-        marcus2002/yolov3-tf2-training:$TAG \
-          python tools/voc2012.py \
-            --classes tsrVOC/classes.txt \
-            --data_dir tsrVOC \
-            --output_file tfData/tsr_train.tfrecord \
-            --split train
- #+END_SRC
-
- #+RESULTS:
-
-#+BEGIN_SRC sh :eval no-export :results output :var STAGE=stage
-ls -ltr  $STAGE/tfData
-#+END_SRC
-
-#+RESULTS:
-: total 448048
-: -rw-r--r-- 1 jj jj 458794094 touko 14 09:33 tsr_train.tfrecord
-
-Convert validation dataset
-
- #+BEGIN_SRC sh :eval no-export :results output :var TAG=tag-number :var STAGE=stage
-   docker run \
-        --user $(id -u):$(id -g) \
-        --workdir /yolov3-tf2 \
-        --volume $STAGE/tsrVOC/:/yolov3-tf2/tsrVOC \
-        --volume $STAGE/tfData/:/yolov3-tf2/tfData \
-        --volume="/etc/passwd:/etc/passwd:ro" \
-        marcus2002/yolov3-tf2-training:$TAG \
-          python tools/voc2012.py \
-            --classes tsrVOC/classes.txt \
-            --data_dir tsrVOC \
-            --output_file tfData/tsr_val.tfrecord \
-            --split val
- #+END_SRC
-
- #+RESULTS:
-
-#+BEGIN_SRC sh :eval no-export :results output :var STAGE=stage
-ls -ltr  $STAGE/tfData
-#+END_SRC
-
-#+RESULTS:
-: total 561180
-: -rw-r--r-- 1 jj jj 458794094 touko 14 09:33 tsr_train.tfrecord
-: -rw-r--r-- 1 jj jj 115846844 touko 14 09:36 tsr_val.tfrecord
-
-
-*** Visualy validate tensorflow conversion
-
- To validate dataset in =$STAGE/tfData/tsr_train.tfrecord= run 
-
- #+BEGIN_SRC sh :eval no-export :results output :var TAG=tag-number :var STAGE=stage
-   docker run \
-        --user $(id -u):$(id -g) \
-        --workdir /yolov3-tf2 \
-        --volume $STAGE/tsrVOC/:/yolov3-tf2/tsrVOC \
-        --volume $STAGE/tfData/:/yolov3-tf2/tfData \
-        --volume="/etc/passwd:/etc/passwd:ro" \
-        marcus2002/yolov3-tf2-training:$TAG \
-          python tools/visualize_dataset.py \
-            --classes tsrVOC/classes.txt \
-            --dataset  tfData/tsr_train.tfrecord \
-            --output tfData/visu-trainset.jpg
-
- #+END_SRC
-
- #+RESULTS:
-
- and check file =$STAGE/tfData/visu-trainset.jpg=
-
- [[file:~/stage/tsr/dtd/tfData/visu-trainset.jpg]]
-
- To validate dataset in =$STAGE/tfData/tsr_val.tfrecord= run
-
- #+BEGIN_SRC sh :eval no-export :results output :var TAG=tag-number :var STAGE=stage
-   docker run \
-        --user $(id -u):$(id -g) \
-        --workdir /yolov3-tf2 \
-        --volume $STAGE/tsrVOC/:/yolov3-tf2/tsrVOC \
-        --volume $STAGE/tfData/:/yolov3-tf2/tfData \
-        --volume="/etc/passwd:/etc/passwd:ro" \
-        marcus2002/yolov3-tf2-training:$TAG \
-          python tools/visualize_dataset.py \
-            --classes tsrVOC/classes.txt \
-            --dataset  tfData/tsr_val.tfrecord \
-            --output tfData/visu-valset.jpg
-
- #+END_SRC
-
- #+RESULTS:
-
-
- and check file =$STAGE/tfData/visu-valset.jpg=
-
- [[file:~/stage/tsr/dtd/tfData/visu-valset.jpg]]
-
+ | Multifilter                                | Filtered image                                                         | Mask                                                                        |
+ |--------------------------------------------+------------------------------------------------------------------------+-----------------------------------------------------------------------------|
+ | blur(8), rotate(60)                        | [[file:./pics/ Multifilterblur(8), rotate(60).png]]                        | [[file:./pics/ Multifilterblur(8), rotate(60)-mask.png]]                        |
+ | rotate(60)                                 | [[file:./pics/ Multifilterrotate(60).png]]                                 | [[file:./pics/ Multifilterrotate(60)-mask.png]]                                 |
+ | blur(8)                                    | [[file:./pics/ Multifilterblur(8).png]]                                    | [[file:./pics/ Multifilterblur(8)-mask.png]]                                    |
+ | blur(8), rotate(60), perspective((10, 45)) | [[file:./pics/ Multifilterblur(8), rotate(60), perspective((10, 45)).png]] | [[file:./pics/ Multifilterblur(8), rotate(60), perspective((10, 45))-mask.png]] |
+ | blur(8), perspective((10, 45)), rotate(60) | [[file:./pics/ Multifilterblur(8), perspective((10, 45)), rotate(60).png]] | [[file:./pics/ Multifilterblur(8), perspective((10, 45)), rotate(60)-mask.png]] |
+ | brightness(-100), perspective((10, 45))    | [[file:./pics/ Multifilterbrightness(-100), perspective((10, 45)).png]]    | [[file:./pics/ Multifilterbrightness(-100), perspective((10, 45))-mask.png]]    |
+ |--------------------------------------------+------------------------------------------------------------------------+-----------------------------------------------------------------------------|
 
 
 

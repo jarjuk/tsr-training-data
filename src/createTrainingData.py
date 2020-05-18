@@ -79,7 +79,8 @@ def yieldMergedImages( backgroundGen, classImagesList, wrangles=list(),
         if debugDebug: src.util.showImage( img, "nextBackgroundImage" )
 
         # find classImage for merge
-        indx = random.choice(range(len(classImagesList)))
+        # indx = random.choice(range(len(classImagesList)))
+        indx = random.randrange(0, len(classImagesList))
         classImage = classImagesList[indx]
         if debug: print( "classImage['imagePath']=", classImage['imagePath'] )
         
@@ -94,8 +95,8 @@ def yieldMergedImages( backgroundGen, classImagesList, wrangles=list(),
         boundingBox = { "ymin":0, "xmin": 0, "ymax": img2H, "xmax": img2W }
 
         # randomly wrangle of classImage  (=cropped and mask images)
-        ((croppedResized, maskResized), _) = wrangleImages( [croppedResized,
-                                                        maskResized], wrangles)
+        croppedResized, maskResized = wrangleImages( croppedResized,
+                                                        maskResized, wrangles)
         ## src.util.showImage( croppedResized, "croppedResized" )        
         
         # Find random position where to merge into
@@ -146,8 +147,8 @@ def createTestImage( mergedImage, indx, testSet, imgType="jpg", wrangles=list() 
     testSet:string, vocXML: string}
 
     """
-    mergedImage["testImage"], boundingBox = wrangleImages(
-        mergedImage['mergedImg'].copy(), wrangles )
+    mergedImage["testImage"], mask = wrangleImages(
+        mergedImage['mergedImg'], None, wrangles )
 
     # Generate unique name
     mergedImage["indx"] = indx
@@ -159,7 +160,7 @@ def createTestImage( mergedImage, indx, testSet, imgType="jpg", wrangles=list() 
     mergedImage["labelFilename"] = "{0}.{1}".format(fileTrunk, "xml" )
     mergedImage["vocXML"] = vocXML( mergedImage )
     
-    return( mergedImage, boundingBox )
+    return( mergedImage, None )
     ##src.util.showImage( img2, "Wrangled " + str(testImage["classInfo"]))
 
 def vocXML( testImage ):
