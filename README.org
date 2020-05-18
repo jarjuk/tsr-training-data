@@ -175,6 +175,9 @@ python  create-data.py
 The output explains the generation run
 
 #+RESULTS: run-default
+: Created 7 test images in 'out/tsrVOC/JPEGImages' with annotations in 'out/tsrVOC/Annotations' folders
+:  class names in 'out/tsrVOC/classes.txt' and list of images 'out/tsrVOC/imagelist.txt'
+:  input from from class images 'Images/signs' and backgrounds'backgrounds' folders
 
 
 *** Input: Class images option =classImages= 

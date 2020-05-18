@@ -4,7 +4,7 @@ import src.util
 from src.imageTools import resize, mergeWithBackground, wrangleImages
 
 
-def yieldMergedImages( backgroundGen, classImagesList, wrangles=list(),
+def yieldMergedImages( backgroundGen, classImagesList, filters, wrangles=list(), 
                      maxImages=3, debugDebug=False, debug=False):
     """@brief merge random 'classImage' 'classImagesList' wrangled using
      one of the wrangeles from into next image taken from
@@ -96,7 +96,7 @@ def yieldMergedImages( backgroundGen, classImagesList, wrangles=list(),
 
         # randomly wrangle of classImage  (=cropped and mask images)
         croppedResized, maskResized = wrangleImages( croppedResized,
-                                                        maskResized, wrangles)
+                                                        maskResized, wrangles, filters)
         ## src.util.showImage( croppedResized, "croppedResized" )        
         
         # Find random position where to merge into
@@ -148,7 +148,7 @@ def createTestImage( mergedImage, indx, testSet, imgType="jpg", wrangles=list() 
 
     """
     mergedImage["testImage"], mask = wrangleImages(
-        mergedImage['mergedImg'], None, wrangles )
+        mergedImage['mergedImg'], None, wrangles, None )
 
     # Generate unique name
     mergedImage["indx"] = indx

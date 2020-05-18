@@ -1,4 +1,3 @@
-import itertools
 import os.path
 from absl import app, flags, logging
 from absl.flags import FLAGS
@@ -23,6 +22,13 @@ flags.DEFINE_string( "classesTemplate",
 flags.DEFINE_string('classImages', "Images/signs", "path to class images")
 flags.DEFINE_string('backgrounds', 'backgrounds', 'path to backgroud images')
 flags.DEFINE_string('testSet', "TSR1", 'Test set name (=folder in output -directory)')
+
+# filters
+flags.DEFINE_multi_integer( "rotates", [10,-45], "Rotate filters used on classImages")
+flags.DEFINE_multi_integer( "blur", [3,5], "Blur filters used on classImages")
+flags.DEFINE_multi_integer( "brightness", [-100,-50], "Brigness filters used on classImages")
+flags.DEFINE_multi_string( "perspective", [ "45,-10", "10,10", "-30,10" ], "Possible perspective values")
+flags.DEFINE_multi_string( "classImageWrangles", [ "blur", "rotate", "brightness" ], "Filter wrangles to run class images" )
 
 # output
 flags.DEFINE_string('images', "out/tsrVOC/JPEGImages", 'output folder where test images are written')
@@ -65,11 +71,20 @@ def main(_argv):
     # Paste random classImages to back
     classImagesList = list( src.classImages.yieldCroppedClassImages(FLAGS.classImages) )
 
-    # Set of filters randomly maninpulating classImage before background past
-    classImageWrangles = [ list(w) for w in itertools.product(
-        src.imageTools.Filters.blurNames(),
-        src.imageTools.Filters.brightnessNames(),
-        src.imageTools.Filters.rotateNames() )]
+    # Set of filters randomly maninpulating classImage before pasting
+    # into background
+    classFilters = { "rotate" : FLAGS.rotates, "blur": FLAGS.blur
+                     , "brightness": FLAGS.brightness
+                     , "perspective": FLAGS.perspective
+    }
+    #  "perspective": [[-45,0],[10,10], [0,0]]
+    print( "classFilters {}".format( classFilters))
+    filters = src.imageTools.Filters( classFilters )
+    classImageWrangles = filters.classImageWrangles( wrangleTypes = FLAGS.classImageWrangles)
+    # classImageWrangles = [ list(w) for w in itertools.product(
+    #     filters.blurNames(),
+    #     filters.brightnessNames(),
+    #     filters.rotateNames() )]
     logging.info( "classImageWrangles={0}".format( classImageWrangles))
 
     
@@ -95,14 +110,15 @@ def main(_argv):
     # Collect unique class names
     classnames = set()
     for indx, mergedImage in enumerate(src.createTrainingData.yieldMergedImages(
-            backgroundGen, classImagesList, maxImages=FLAGS.maxImages, wrangles=classImageWrangles,
+            backgroundGen, classImagesList, filters, maxImages=FLAGS.maxImages, wrangles=classImageWrangles,
             debug=False, debugDebug=False )):
 
         # iterate 'backgroundGen', choose random image from
         # 'classImagesList', and run random wrangler from
         # 'classImageWrangles' and merge classImage with background
 
-        logging.info( "value: {0}".format(mergedImage["classInfo"]["value"], mergedImage["classInfo"]["type"], mergedImage["classInfo"]["startOrEnd"], mergedImage["classInfo"]) )
+        logging.info( "classInfo value: {0} type: {1} startOrEnd: {2}".format(
+            mergedImage["classInfo"]["value"], mergedImage["classInfo"]["type"], mergedImage["classInfo"]["startOrEnd"], mergedImage["classInfo"]) )
 
         # Use template to define class name
         mergedImage["classname"] = FLAGS.classesTemplate.format(**mergedImage["classInfo"] )

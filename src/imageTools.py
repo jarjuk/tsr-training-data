@@ -1,3 +1,4 @@
+import itertools
 import cv2
 import random
 import numpy as np
@@ -106,7 +107,9 @@ def perspective_image( img, rots, mask = None):
         return( M )
 
     # add possible rotation
+    if isinstance( rots, str): rots = tuple([ int(v) for v in rots.split(",")])
     if len(rots) == 2: rots = rots +(0,)
+    logging.debug( "perspective_image: rots={}".format( rots ))
     
     # maps rots --> 2-Dtransformation matrix
     rads =  [math.radians(r) for r in rots ]
@@ -217,60 +220,99 @@ def mergeWithBackground( background, cropped, mask, pos=(0,0) ):
     
     return(background, boundingBox)
 
-
+# ------------------------------------------------------------------
+# Filter implementations
 
 class Filters:
 
-    ROTATES= [-32, -10, -2, 1, 5, 28, 35, 45]
-    RESIZES=[50,100,200]
-    BLURS=[3,6]
-    BRIGHTNESSES=[10,50,100]
-    
-    def rotates():
-        return Filters.ROTATES
-    def resizes():
-        return Filters.RESIZES
-    def blurs():
-        return Filters.BLURS
-    def brightnesses():
-        return Filters.BRIGHTNESSES
+    # map filter name to function implementation 
+    filterFuncs = {
+        "rotate" : rotate_image
+        , "blur" : blur_image
+        , "brightness" : brightness_image
+        , "perspective" : perspective_image
+    }
 
-    def rotateNames( noop= True ):
-        names = [ "rotate{0}".format(k) for  k in Filters.rotates() ]
-        if noop:
-            names = names + [ "noop"]
-        return( names )
-    def blurNames( noop= True):
-        names = [ "blur{0}".format(k) for k in Filters.blurs() ]
-        if noop:
-            names = names + [ "noop"]
-        return( names )
-    def brightnessNames( noop = True ):
-        names = [ "brightness{0}".format(k) for k in Filters.brightnesses() ]
-        if noop:
-            names = names + [ "noop"]
-        return( names )
+    # init simpleWrangles 
+    def __init__(self, filterConfiguration):
+        # default filtes
+        Filters.init()
 
-    
-simpleWrangles = {
-    "noop" : lambda img, mask :  (img, mask)
-}
+        # Init member variables
+        # filterLambdaName --> lamdba img, mask
+        self.simpleWrangles = {
+            "noop" : lambda img, mask :  (img, mask)
+        }
+        # filterName --> [filterLambdaName ]
+        self.filterTypes = { k : [] for k in Filters.filterFuncs.keys() }
+        
+        # filterName -> filterLambdaName --> filterLambda (binds filterParameter)
+        for filterName in filterConfiguration.keys():
+            
+            filterParameters = filterConfiguration[filterName]
+            logging.info( "filterName {}, params {} ".format( filterName, filterParameters))
+            filterFunc = Filters.filterFuncs[filterName]
+            
+            for filterParameter in filterParameters: 
+                filterLambdaName, filterLambda = Filters.createFilter( filterName, filterFunc, filterParameter  )
+                logging.info( "filterLambdaName {}, params {} ".format( filterLambdaName, filterParameter))
+                
+                # Update state
+                self.filterTypes[filterName].append(filterLambdaName )
+                self.simpleWrangles.update( { filterLambdaName :  filterLambda })
 
-def createLambda(  f, k ):
-    """Short cut and create contexted for 'k'"""
-    return( lambda img, mask : f( img, k, mask = mask ) )
-
-simpleWrangles.update({ "rotate{0}".format(k): createLambda( rotate_image, k ) for k in Filters.rotates() })
-simpleWrangles.update({ "resize{0}".format(k): createLambda( resize_image, k ) for k in Filters.resizes() })
-simpleWrangles.update({ "blur{0}".format(k): createLambda ( blur_image, k ) for k in Filters.blurs() })
-simpleWrangles.update({ "brightness{0}".format(k): createLambda( brightness_image, k ) for k in Filters.brightnesses() })
-
-logging.debug( "simpleWrangles.keys()", simpleWrangles.keys())
+            
+    def createLambda(  f, filteringParam ):
+        """Create lambda for function 'f(img,mask)' to filter 'img' and 'mask'
+        using filter 'filteringParam'
+        """
+        return( lambda img, mask : f( img, filteringParam, mask = mask ) )
 
     
+    def createFilter( filterName, filterFunction, filterParam ):
+        """Create lambda and function name wrapping 'filterFunction'"""
+        return( "{0}{1}".format(filterName, filterParam), Filters.createLambda( filterFunction, filterParam))
+
+    #  "blur", "rotate", "brightness",
+    def classImageWrangles( self, wrangleTypes = [ "perspective"], noop=True ):
+        """
+        @param wrangleTypes list of filter types to include in 'classImageWrangles'
+
+        @param noop if true add no-operation filter to possibilities
+
+        @return Array<String>, or Array<Array<String>> of wrangle names to
+        wrangle class images"""
+        
+        noopFilter = []
+        if noop: noopFilter = [ "noop"]
+        
+        wrangleNames = [ list(w) for w in itertools.product( *[self.filterTypes[typeName]  + noopFilter for typeName in wrangleTypes ] ) ]
+        logging.info( "classImageWrangles: wrangleNames {}".format(wrangleNames))
+        return( list(wrangleNames) )
+
+    def wrangleDict(self):
+        """@return dict mapping filter name to lambda -function implementing
+        the filter action.
+
+        """
+        return( self.simpleWrangles )
+        
+    def init():
+        # singleton
+        if hasattr(Filters, "simpleWrangles"): return( Filters.simpleWrangles )
+
+        # Initizalize
+        Filters.simpleWrangles = {
+            "noop" : lambda img, mask :  (img, mask)
+        }
 
 
-def wrangleImages( img, mask, wrangles, wrangleDict=simpleWrangles ):
+
+# ------------------------------------------------------------------
+# Service API
+
+
+def wrangleImages( img, mask, wrangles, filters ):
     """Wrangle each 'img' and (mask) using using a random 'wrangler' in
     'wrangles'
 
@@ -281,10 +323,13 @@ def wrangleImages( img, mask, wrangles, wrangleDict=simpleWrangles ):
     @return wrangled 'imgs'
 
     """
-
+    wrangleDict = {}
+    if filters is not None: wrangleDict = filters.wrangleDict()
+    
     def runWrangler( img, mask, wrangleDef, wrangleDict ):
         wrangleNames = wrangleDef if isinstance( wrangleDef, list) else [wrangleDef]
         for wrangleName in wrangleNames:
+            logging.debug( "runWrangler: wrangleName: {}".format(wrangleName))
             img, mask = wrangleDict[wrangleName](img, mask )
 
         return( img, mask )
