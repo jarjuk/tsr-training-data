@@ -1,0 +1,350 @@
+
+* Generating test data for =yolov3-tf2= testing
+
+This example uses =creteta-data.py= tool to generate test data for
+tool is for [[https://github.com/zzh8829/yolov3-tf2][YoloV3 algorithm implemented in Tensorflow 2.0]].  This
+alrithm and its associated tools are packaged within [[https://github.com/zzh8829/yolov3-tf2][Docker container]].
+
+** Create stage directory =$HOME/stage/tsr/dtd= 
+
+This example uses stage directory 
+
+#+name: stagedirectory
+#+begin_example
+$HOME/stage/tsr/dtd
+#+end_example
+
+#+name: stage
+#+BEGIN_SRC python :eval no-export  :noweb no :var stage=stagedirectory  :exports none  :exports none
+import os
+return os.path.expandvars(stage)
+#+END_SRC
+
+#+RESULTS: stage
+: /home/jj/stage/tsr/dtd2
+
+Set environment variable =$STAGE=
+
+#+BEGIN_SRC sh :eval no-export :results output :var stage=stagedirectory :exports results
+echo export STAGE=$stage
+#+END_SRC
+
+#+RESULTS:
+: export STAGE=$HOME/stage/tsr/dtd
+
+
+Create stage directory
+
+#+BEGIN_SRC sh :eval no-export :results output :var STAGE=stage :exports code
+mkdir -p $STAGE
+#+END_SRC
+
+#+RESULTS:
+
+
+** Download background image package to $STAGE directory
+
+#+BEGIN_SRC sh :eval no-export :results output :var STAGE=stage
+cd $STAGE
+wget https://www.robots.ox.ac.uk/~vgg/data/dtd/download/dtd-r1.0.1.tar.gz
+#+END_SRC
+
+#+RESULTS:
+
+Show the downloaded package
+
+#+BEGIN_SRC sh :eval no-export :results output :exports both :var STAGE=stage
+ls -ltr $STAGE
+#+END_SRC
+
+#+RESULTS:
+: total 610592
+: -rw-rw-r-- 1 jj jj 625239812 joulu 17  2014 dtd-r1.0.1.tar.gz
+
+
+** Extract image package
+   :PROPERTIES:
+   :header-args:sh: :dir  ~/stage/tsr/dtd
+   :END:
+
+#+BEGIN_SRC sh :eval no-export :results output
+tar xfz dtd-r1.0.1.tar.gz 
+#+END_SRC
+
+#+RESULTS:
+
+Inspect =dtd= directory, which was extracted
+
+#+BEGIN_SRC sh :eval no-export :results output :exports both
+du dtd
+#+END_SRC
+
+#+RESULTS:
+#+begin_example
+4852	dtd/images/crystalline
+19112	dtd/images/smeared
+9568	dtd/images/freckled
+13032	dtd/images/meshed
+5644	dtd/images/stained
+12384	dtd/images/grooved
+16880	dtd/images/matted
+23672	dtd/images/frilly
+8040	dtd/images/fibrous
+24736	dtd/images/woven
+16860	dtd/images/cobwebbed
+22604	dtd/images/zigzagged
+8900	dtd/images/chequered
+6100	dtd/images/scaly
+11892	dtd/images/perforated
+6212	dtd/images/bumpy
+4192	dtd/images/studded
+17056	dtd/images/flecked
+19200	dtd/images/sprinkled
+8568	dtd/images/bubbly
+20052	dtd/images/pitted
+8304	dtd/images/interlaced
+23640	dtd/images/spiralled
+6708	dtd/images/gauzy
+21668	dtd/images/cracked
+13832	dtd/images/honeycombed
+10480	dtd/images/paisley
+18028	dtd/images/wrinkled
+11696	dtd/images/banded
+13984	dtd/images/potholed
+12988	dtd/images/marbled
+4300	dtd/images/striped
+9268	dtd/images/polka-dotted
+13916	dtd/images/stratified
+7020	dtd/images/waffled
+8724	dtd/images/pleated
+14592	dtd/images/swirly
+10988	dtd/images/dotted
+13648	dtd/images/veined
+15860	dtd/images/porous
+19612	dtd/images/grid
+26476	dtd/images/lacelike
+21320	dtd/images/blotchy
+6128	dtd/images/braided
+9896	dtd/images/knitted
+14732	dtd/images/crosshatched
+11116	dtd/images/lined
+628484	dtd/images
+1648	dtd/labels
+36	dtd/imdb
+630172	dtd
+#+end_example
+
+Remove downloaded image package  =dtd-r1.0.1.tar.gz=  from wasting space
+
+#+BEGIN_SRC sh :eval no-export :results output
+rm -f xfz dtd-r1.0.1.tar.gz 
+#+END_SRC
+
+#+RESULTS:
+
+
+** Generated test images background =$STAGE/dtd=
+
+#+name: run-dtd
+#+BEGIN_SRC sh :eval no-export :results output :exports both :var STAGE=stage
+python  create-data.py \
+      --annotations $STAGE/tsrVOC/Annotations \
+      --images $STAGE/tsrVOC/JPEGImages \
+      --backgrounds $STAGE/dtd  \
+      --classes $STAGE/tsrVOC/classes.txt \
+      --imagelist $STAGE/tsrVOC/imagelist.txt
+#+END_SRC
+
+#+RESULTS: run-dtd
+: classFilters {'rotate': [10, -45], 'blur': [3, 5], 'brightness': [-100, -50], 'perspective': ['45,-10', '10,10', '-30,10']}
+: Created 5640 test images in '/home/jj/stage/tsr/dtd/tsrVOC/JPEGImages' with annotations in '/home/jj/stage/tsr/dtd/tsrVOC/Annotations' folders
+:  class names in '/home/jj/stage/tsr/dtd/tsrVOC/classes.txt' and list of images '/home/jj/stage/tsr/dtd/tsrVOC/imagelist.txt'
+:  input from from class images 'Images/signs' and backgrounds'/home/jj/stage/tsr/dtd/dtd' folders
+
+
+** Create test and validation sets
+
+Randomize lines in image files =imagelist.txt=
+
+#+BEGIN_SRC sh :eval no-export :results output :var STAGE=stage
+shuf $STAGE/tsrVOC/imagelist.txt > $STAGE/tsrVOC/imagelist-shuffed.txt 
+#+END_SRC
+
+#+RESULTS:
+
+Validate that line count =5640= in =imagelist-shuffed.txt= matches the
+line count of the original =imagelist.txt= file:
+
+#+BEGIN_SRC sh :eval no-export :results output :var STAGE=stage :exports both
+wc -l $STAGE/tsrVOC/imagelist.txt $STAGE/tsrVOC/imagelist-shuffed.txt
+#+END_SRC
+
+#+RESULTS:
+:   5640 /home/jj/stage/tsr/dtd/tsrVOC/imagelist.txt
+:   5640 /home/jj/stage/tsr/dtd/tsrVOC/imagelist-shuffed.txt
+:  11280 total
+
+Take first 20% (1128) lines to validation and rest of the file 80%
+(4512) to training into files in =$STAGE/tsrVOC/ImageSets/Main=
+-directory
+
+#+BEGIN_SRC sh :eval no-export :results output :var STAGE=stage
+mkdir -p  $STAGE/tsrVOC/ImageSets/Main
+head -1128 $STAGE/tsrVOC/imagelist-shuffed.txt > $STAGE/tsrVOC/ImageSets/Main/aeroplane_val.txt
+tail -4512 $STAGE/tsrVOC/imagelist-shuffed.txt > $STAGE/tsrVOC/ImageSets/Main/aeroplane_train.txt
+#+END_SRC
+
+#+RESULTS:
+
+Validate that exactly =5640= lines are in validation and training set files
+
+#+BEGIN_SRC sh :eval no-export :results output :var STAGE=stage :exports both
+wc  -l $STAGE/tsrVOC/ImageSets/Main/*
+#+END_SRC
+
+#+RESULTS:
+:   4512 /home/jj/stage/tsr/dtd/tsrVOC/ImageSets/Main/aeroplane_train.txt
+:   1128 /home/jj/stage/tsr/dtd/tsrVOC/ImageSets/Main/aeroplane_val.txt
+:   5640 total
+
+
+** Convert training and validation data sets to tensorflow format
+Create directory where tensorflow data files will be created
+
+#+BEGIN_SRC sh :eval no-export :results output :var STAGE=stage
+mkdir $STAGE/tfData
+rm -f $STAGE/tfData/*
+#+END_SRC
+
+#+RESULTS:
+
+Tag number for =marcus2002/yolov3-tf2-training=
+
+ #+name: tag-number 
+ #+BEGIN_SRC R :exports none
+ 1
+ #+END_SRC
+
+
+
+Convert training data under =$STAGE/out/tsrVOC= directory. 
+
+ #+BEGIN_SRC sh :eval no-export :results output :var TAG=tag-number :var STAGE=stage
+   docker run \
+        --user $(id -u):$(id -g) \
+        --workdir /yolov3-tf2 \
+        --volume $STAGE/tsrVOC/:/yolov3-tf2/tsrVOC \
+        --volume $STAGE/tfData/:/yolov3-tf2/tfData \
+        --volume="/etc/passwd:/etc/passwd:ro" \
+        marcus2002/yolov3-tf2-training:$TAG \
+          python tools/voc2012.py \
+            --classes tsrVOC/classes.txt \
+            --data_dir tsrVOC \
+            --output_file tfData/tsr_train.tfrecord \
+            --split train
+ #+END_SRC
+
+ #+RESULTS:
+
+#+BEGIN_SRC sh :eval no-export :results output :var STAGE=stage
+ls -ltr  $STAGE/tfData
+#+END_SRC
+
+#+RESULTS:
+: total 446288
+: -rw-r--r-- 1 jj jj 456990898 touko 18 14:13 tsr_train.tfrecord
+
+Convert validation dataset
+
+ #+BEGIN_SRC sh :eval no-export :results output :var TAG=tag-number :var STAGE=stage
+   docker run \
+        --user $(id -u):$(id -g) \
+        --workdir /yolov3-tf2 \
+        --volume $STAGE/tsrVOC/:/yolov3-tf2/tsrVOC \
+        --volume $STAGE/tfData/:/yolov3-tf2/tfData \
+        --volume="/etc/passwd:/etc/passwd:ro" \
+        marcus2002/yolov3-tf2-training:$TAG \
+          python tools/voc2012.py \
+            --classes tsrVOC/classes.txt \
+            --data_dir tsrVOC \
+            --output_file tfData/tsr_val.tfrecord \
+            --split val
+ #+END_SRC
+
+ #+RESULTS:
+
+#+BEGIN_SRC sh :eval no-export :results output :var STAGE=stage
+ls -ltr  $STAGE/tfData
+#+END_SRC
+
+#+RESULTS:
+: total 561124
+: -rw-r--r-- 1 jj jj 456990898 touko 18 14:13 tsr_train.tfrecord
+: -rw-r--r-- 1 jj jj 117584840 touko 18 14:13 tsr_val.tfrecord
+
+
+
+** Visualy validate tensorflow conversion
+
+To validate dataset in =$STAGE/tfData/tsr_train.tfrecord= run 
+
+#+BEGIN_SRC sh :eval no-export :results output :var TAG=tag-number :var STAGE=stage
+  docker run \
+       --user $(id -u):$(id -g) \
+       --workdir /yolov3-tf2 \
+       --volume $STAGE/tsrVOC/:/yolov3-tf2/tsrVOC \
+       --volume $STAGE/tfData/:/yolov3-tf2/tfData \
+       --volume="/etc/passwd:/etc/passwd:ro" \
+       marcus2002/yolov3-tf2-training:$TAG \
+         python tools/visualize_dataset.py \
+           --classes tsrVOC/classes.txt \
+           --dataset  tfData/tsr_train.tfrecord \
+           --output tfData/visu-trainset.jpg
+
+#+END_SRC
+
+#+RESULTS:
+
+and check file =$STAGE/tfData/visu-trainset.jpg=
+
+[[file:~/stage/tsr/dtd/tfData/visu-trainset.jpg]]
+
+To validate dataset in =$STAGE/tfData/tsr_val.tfrecord= run
+
+#+BEGIN_SRC sh :eval no-export :results output :var TAG=tag-number :var STAGE=stage
+  docker run \
+       --user $(id -u):$(id -g) \
+       --workdir /yolov3-tf2 \
+       --volume $STAGE/tsrVOC/:/yolov3-tf2/tsrVOC \
+       --volume $STAGE/tfData/:/yolov3-tf2/tfData \
+       --volume="/etc/passwd:/etc/passwd:ro" \
+       marcus2002/yolov3-tf2-training:$TAG \
+         python tools/visualize_dataset.py \
+           --classes tsrVOC/classes.txt \
+           --dataset  tfData/tsr_val.tfrecord \
+           --output tfData/visu-valset.jpg
+
+#+END_SRC
+
+#+RESULTS:
+
+
+and check file =$STAGE/tfData/visu-valset.jpg=
+
+[[file:~/stage/tsr/dtd/tfData/visu-valset.jpg]]
+
+
+
+
+
+* Fin                                                              :noexport:
+
+** Emacs variables
+
+   #+RESULTS:
+
+   # Local Variables:
+   # org-confirm-babel-evaluate: nil
+   # End:
+
+

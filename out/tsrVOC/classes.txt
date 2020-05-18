@@ -1,5 +1,6 @@
-20-start
-50-start
-70-start
-30-start
+60-start
+120-start
+urban-end
+50-end
 30-end
+30-start
