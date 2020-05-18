@@ -42,7 +42,10 @@ releaseit.sh  create_release commit current VERSION commit tag 2>&1 || true
 #+END_SRC
 
 #+RESULTS:
-: Not a snapshot release 0.1.0
+: [dev 6789bff] ## 0.1.4/20200518-14:16:45
+:  1 file changed, 1 insertion(+), 1 deletion(-)
+: [dev 627d157] ## 0.1.4/20200518-14:16:45
+:  1 file changed, 1 insertion(+), 1 deletion(-)
 
 
 
