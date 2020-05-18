@@ -3,7 +3,7 @@
 	<filename>TSR-image00000.jpg</filename>
 	<source>
 		<database>TSR training data</database>
-		<annotation>classInfo: {'value': '30', 'type': 'area', 'startOrEnd': 'end'}</annotation>
+		<annotation>classInfo: {'value': '50', 'type': 'area', 'startOrEnd': 'start'}</annotation>
 		<image>flickr</image>
 	</source>
 	<size>
@@ -13,15 +13,15 @@
 	</size>
 	<segmented>0</segmented>
 	<object>
-		<name>30-end</name>
+		<name>50-start</name>
 		<pose>Unspecified</pose>
 		<truncated>0</truncated>
 		<difficult>0</difficult>
 		<bndbox>
-			<xmin>466</xmin>
-			<ymin>299</ymin>
-			<xmax>546</xmax>
-			<ymax>379</ymax>
+			<xmin>281</xmin>
+			<ymin>379</ymin>
+			<xmax>360</xmax>
+			<ymax>443</ymax>
 		</bndbox>
 	</object>
 </annotation>

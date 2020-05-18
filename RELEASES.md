@@ -1,5 +1,11 @@
 ## 0.1.5-SNAPSHOT/20200518-14:16:54
+
+- support randomized wrangle class/test images
+
 ## 0.1.4/20200518-14:16:45
+
+- filter examples
+
 ## 0.1.3/20200514-09:54:11
 
 - fixed toc

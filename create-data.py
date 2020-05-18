@@ -13,31 +13,36 @@ flags.DEFINE_integer('debug', -1, '-3=fatal, -1=warning, 0=info, 1=debug')
 flags.DEFINE_integer('seed', None, 'Random seed (default None)')
 flags.DEFINE_boolean('interactive', False, 'show training data')
 flags.DEFINE_integer("maxImages", -1, "Number of images to generate, -1=proces all background images")
-flags.DEFINE_string( "imagelistTemplate",
-                     "{imageFileBasename} -1\n", "template to interpolate imagelist file lines")
-flags.DEFINE_string( "classesTemplate",
-                     "{value}-{startOrEnd}", "template to interpolate classes file lines")
+
 
 # input
 flags.DEFINE_string('classImages', "Images/signs", "path to class images")
 flags.DEFINE_string('backgrounds', 'backgrounds', 'path to backgroud images')
 flags.DEFINE_string('testSet', "TSR1", 'Test set name (=folder in output -directory)')
 
-# filters
-flags.DEFINE_multi_integer( "rotates", [10,-45], "Rotate filters used on classImages")
+# class image filters
+flags.DEFINE_multi_integer( "rotates", [10,4  ,-5, -10], "Rotate filters used on classImages")
 flags.DEFINE_multi_integer( "blur", [3,5], "Blur filters used on classImages")
-flags.DEFINE_multi_integer( "brightness", [-100,-50], "Brigness filters used on classImages")
+flags.DEFINE_multi_integer( "brightness", [-70,-20], "Brigness filters used on classImages")
 flags.DEFINE_multi_string( "perspective", [ "45,-10", "10,10", "-30,10" ], "Possible perspective values")
-flags.DEFINE_multi_string( "classImageWrangles", [ "blur", "rotate", "brightness" ], "Filter wrangles to run class images" )
+flags.DEFINE_multi_string( "classImageWrangles", [ "blur", "rotate", "brightness", "perspective" ], "Filter wrangles to run on class images" )
+
+# test image filters
+flags.DEFINE_multi_integer( "brightness2", [-30,-20], "Brigness filters used on test images")
+flags.DEFINE_multi_integer( "blur2", [1,2,3], "Blur filters used on test images")
+flags.DEFINE_multi_string( "testImageWrangles", [ "brightness", "blur" ], "Filter wrangles to run on test images (=final result)" )
 
 # output
 flags.DEFINE_string('images', "out/tsrVOC/JPEGImages", 'output folder where test images are written')
-flags.DEFINE_string(
-    'annotations', "out/tsrVOC/Annotations"
-    , "path to  annotations folder (defaults 'annotations' under images folder)")
+flags.DEFINE_string( 'annotations', "out/tsrVOC/Annotations" , "path to annotations folder")
 flags.DEFINE_string('classes', "out/tsrVOC/classes.txt", 'path file where classnames are written')
+flags.DEFINE_string( "classesTemplate",
+                     "{value}-{startOrEnd}", "template to interpolate classes file lines")
+
 flags.DEFINE_string('imagelist', "out/tsrVOC/imagelist.txt",
                     'path file where list of images are written')
+flags.DEFINE_string( "imagelistTemplate",
+                     "{imageFileBasename} -1\n", "template to interpolate imagelist file lines")
 
 
 ## flags.DEFINE_list( "rotates", "-32,-10,-5,3,35,45", "rotate angles to wrangle class images")
@@ -73,20 +78,24 @@ def main(_argv):
 
     # Set of filters randomly maninpulating classImage before pasting
     # into background
-    classFilters = { "rotate" : FLAGS.rotates, "blur": FLAGS.blur
-                     , "brightness": FLAGS.brightness
-                     , "perspective": FLAGS.perspective
-    }
-    #  "perspective": [[-45,0],[10,10], [0,0]]
-    print( "classFilters {}".format( classFilters))
-    filters = src.imageTools.Filters( classFilters )
-    classImageWrangles = filters.classImageWrangles( wrangleTypes = FLAGS.classImageWrangles)
-    # classImageWrangles = [ list(w) for w in itertools.product(
-    #     filters.blurNames(),
-    #     filters.brightnessNames(),
-    #     filters.rotateNames() )]
+    classImagesFilters = src.imageTools.Filters(
+        { "rotate" : FLAGS.rotates, "blur": FLAGS.blur
+          , "brightness": FLAGS.brightness
+          , "perspective": FLAGS.perspective
+    })
+    classImageWrangles = classImagesFilters.imageWrangles( wrangleTypes = FLAGS.classImageWrangles)
     logging.info( "classImageWrangles={0}".format( classImageWrangles))
 
+    # Wranlers to run on test images (=finalize result)
+
+    testImagesFilters = src.imageTools.Filters(
+        { 
+            "brightness": FLAGS.brightness2
+            , "blur": FLAGS.blur2
+        })    
+    testImageWrangles = testImagesFilters.imageWrangles(wrangleTypes = FLAGS.testImageWrangles)
+    logging.info( "testImageWrangles={0}".format( testImageWrangles))    
+    
     
     # First image number
     indx = 1
@@ -98,20 +107,24 @@ def main(_argv):
     imagesDirectory = os.path.join(FLAGS.images)
     annotationDirectory =  os.path.join(FLAGS.annotations)
 
-    # make sure that directoies exist 
+    # make sure that directories exist 
     ensure_dir( imagesDirectory )
     ensure_dir( annotationDirectory )
     ensure_filedir( FLAGS.imagelist )
     ensure_filedir( FLAGS.classes )    
 
-    
+
+    # empty imagelist
     open( FLAGS.imagelist, "w").close()
     
     # Collect unique class names
     classnames = set()
-    for indx, mergedImage in enumerate(src.createTrainingData.yieldMergedImages(
-            backgroundGen, classImagesList, filters, maxImages=FLAGS.maxImages, wrangles=classImageWrangles,
-            debug=False, debugDebug=False )):
+    for indx, mergedImage in enumerate(
+            src.createTrainingData.yieldMergedImages(
+                backgroundGen,
+                classImagesList, classImagesFilters,
+                maxImages=FLAGS.maxImages, wrangles=classImageWrangles,
+                debug=False, debugDebug=False )):
 
         # iterate 'backgroundGen', choose random image from
         # 'classImagesList', and run random wrangler from
@@ -123,7 +136,10 @@ def main(_argv):
         # Use template to define class name
         mergedImage["classname"] = FLAGS.classesTemplate.format(**mergedImage["classInfo"] )
 
-        testImage, _ = src.createTrainingData.createTestImage( mergedImage, indx , testSet=FLAGS.testSet  )
+        # actual merge
+        testImage, _ = src.createTrainingData.createTestImage(
+            mergedImage, indx , testSet=FLAGS.testSet,
+            wrangles=testImageWrangles, filters=testImagesFilters )
 
         if FLAGS.interactive: 
             imgBox = src.imageTools.drawBoundingBox( testImage["testImage"], testImage["boundingBox"] )
@@ -147,7 +163,7 @@ def main(_argv):
             
 
     # create classes file with unique classnames
-    classNameLines = [ cName+"\n" for cName in classnames  ]
+    classNameLines = [ cName+"\n" for cName in sorted(classnames) ]
     with open( FLAGS.classes, "w+" ) as classFile:
         classFile.writelines( classNameLines )
             

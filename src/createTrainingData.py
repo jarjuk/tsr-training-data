@@ -51,7 +51,7 @@ def yieldMergedImages( backgroundGen, classImagesList, filters, wrangles=list(),
         mH,mW = mask.shape[:2]
         return( random.randrange(0,iH-mH), random.randrange(0,iW-mW)  )
     
-    def randomResizeWidth( maxWidth=100, minWidthPercent=0.1, minWidthLimit=30):
+    def randomResizeWidth( maxWidth=100, minWidthPercent=0.1, minWidthLimit=50):
         """@brief return randomized width for image to merge into backgroud
 
         @param minWidthLimit min value of width
@@ -129,7 +129,7 @@ def yieldMergedImages( backgroundGen, classImagesList, filters, wrangles=list(),
 
     
 
-def createTestImage( mergedImage, indx, testSet, imgType="jpg", wrangles=list() ):
+def createTestImage( mergedImage, indx, testSet, imgType="jpg", wrangles=list(), filters=None ):
     """@brief Finalize 'mergedImage' to 'testImage' using set of
     'wrangeles' 
 
@@ -148,7 +148,7 @@ def createTestImage( mergedImage, indx, testSet, imgType="jpg", wrangles=list() 
 
     """
     mergedImage["testImage"], mask = wrangleImages(
-        mergedImage['mergedImg'], None, wrangles, None )
+        mergedImage['mergedImg'], None, wrangles, filters )
 
     # Generate unique name
     mergedImage["indx"] = indx

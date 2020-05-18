@@ -274,7 +274,7 @@ class Filters:
         return( "{0}{1}".format(filterName, filterParam), Filters.createLambda( filterFunction, filterParam))
 
     #  "blur", "rotate", "brightness",
-    def classImageWrangles( self, wrangleTypes = [ "perspective"], noop=True ):
+    def imageWrangles( self, wrangleTypes = [ "perspective"], noop=True ):
         """
         @param wrangleTypes list of filter types to include in 'classImageWrangles'
 
@@ -287,8 +287,9 @@ class Filters:
         if noop: noopFilter = [ "noop"]
         
         wrangleNames = [ list(w) for w in itertools.product( *[self.filterTypes[typeName]  + noopFilter for typeName in wrangleTypes ] ) ]
-        logging.info( "classImageWrangles: wrangleNames {}".format(wrangleNames))
+        logging.info( "imageWrangles: wrangleNames {}".format(wrangleNames))
         return( list(wrangleNames) )
+
 
     def wrangleDict(self):
         """@return dict mapping filter name to lambda -function implementing
