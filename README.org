@@ -649,7 +649,7 @@ The unfiltered 200 pixel wide image
               strValue = str(filterValue)
           else:
               strValue = str( strValues[index])
-          strValueInName = strValue.replace( '[', "_").replace( ']', "_").replace( '(', "_").replace( ')', "_").replace( ',', "x")
+          strValueInName = strValue.replace( '[', "").replace( ']', "").replace( '(', "").replace( ')', "").replace( ',', "").replace( ' ', "")
           imageFile =  filterName + strValueInName + ".png"
           maskFile = filterName + strValueInName + "-mask.png"
           imageLink, maskLink = filterImage(
@@ -829,15 +829,15 @@ rotation also on the white area.
  #+END_SRC
 
  #+RESULTS:
- | Perspective | Filtered image                       | Mask                                      |
- |-------------+--------------------------------------+-------------------------------------------|
- | (0, -45)    | [[file:./pics/Perspective_0x -45_.png]]  | [[file:./pics/Perspective_0x -45_-mask.png]]  |
- | (0, 45)     | [[file:./pics/Perspective_0x 45_.png]]   | [[file:./pics/Perspective_0x 45_-mask.png]]   |
- | (-45, 0)    | [[file:./pics/Perspective_-45x 0_.png]]  | [[file:./pics/Perspective_-45x 0_-mask.png]]  |
- | (45, 0)     | [[file:./pics/Perspective_45x 0_.png]]   | [[file:./pics/Perspective_45x 0_-mask.png]]   |
- | (45, 45)    | [[file:./pics/Perspective_45x 45_.png]]  | [[file:./pics/Perspective_45x 45_-mask.png]]  |
- | (-45, 45)   | [[file:./pics/Perspective_-45x 45_.png]] | [[file:./pics/Perspective_-45x 45_-mask.png]] |
- |-------------+--------------------------------------+-------------------------------------------|
+ | Perspective | Filtered image                   | Mask                                  |
+ |-------------+----------------------------------+---------------------------------------|
+ | (0, -45)    | [[file:./pics/Perspective0-45.png]]  | [[file:./pics/Perspective0-45-mask.png]]  |
+ | (0, 45)     | [[file:./pics/Perspective045.png]]   | [[file:./pics/Perspective045-mask.png]]   |
+ | (-45, 0)    | [[file:./pics/Perspective-450.png]]  | [[file:./pics/Perspective-450-mask.png]]  |
+ | (45, 0)     | [[file:./pics/Perspective450.png]]   | [[file:./pics/Perspective450-mask.png]]   |
+ | (45, 45)    | [[file:./pics/Perspective4545.png]]  | [[file:./pics/Perspective4545-mask.png]]  |
+ | (-45, 45)   | [[file:./pics/Perspective-4545.png]] | [[file:./pics/Perspective-4545-mask.png]] |
+ |-------------+----------------------------------+---------------------------------------|
 
 
 *** Combined filter
@@ -893,15 +893,15 @@ rotation also on the white area.
  #+END_SRC
 
  #+RESULTS:
- | Multifilter                                | Filtered image                                                         | Mask                                                                        |
- |--------------------------------------------+------------------------------------------------------------------------+-----------------------------------------------------------------------------|
- | blur(8), rotate(60)                        | [[file:./pics/ Multifilterblur_8_x rotate_60_.png]]                        | [[file:./pics/ Multifilterblur_8_x rotate_60_-mask.png]]                        |
- | rotate(60)                                 | [[file:./pics/ Multifilterrotate_60_.png]]                                 | [[file:./pics/ Multifilterrotate_60_-mask.png]]                                 |
- | blur(8)                                    | [[file:./pics/ Multifilterblur_8_.png]]                                    | [[file:./pics/ Multifilterblur_8_-mask.png]]                                    |
- | blur(8), rotate(60), perspective((10, 45)) | [[file:./pics/ Multifilterblur_8_x rotate_60_x perspective__10x 45__.png]] | [[file:./pics/ Multifilterblur_8_x rotate_60_x perspective__10x 45__-mask.png]] |
- | blur(8), perspective((10, 45)), rotate(60) | [[file:./pics/ Multifilterblur_8_x perspective__10x 45__x rotate_60_.png]] | [[file:./pics/ Multifilterblur_8_x perspective__10x 45__x rotate_60_-mask.png]] |
- | brightness(-100), perspective((10, 45))    | [[file:./pics/ Multifilterbrightness_-100_x perspective__10x 45__.png]]    | [[file:./pics/ Multifilterbrightness_-100_x perspective__10x 45__-mask.png]]    |
- |--------------------------------------------+------------------------------------------------------------------------+-----------------------------------------------------------------------------|
+ | Multifilter                                | Filtered image                                            | Mask                                                           |
+ |--------------------------------------------+-----------------------------------------------------------+----------------------------------------------------------------|
+ | blur(8), rotate(60)                        | [[file:./pics/ Multifilterblur8rotate60.png]]                 | [[file:./pics/ Multifilterblur8rotate60-mask.png]]                 |
+ | rotate(60)                                 | [[file:./pics/ Multifilterrotate60.png]]                      | [[file:./pics/ Multifilterrotate60-mask.png]]                      |
+ | blur(8)                                    | [[file:./pics/ Multifilterblur8.png]]                         | [[file:./pics/ Multifilterblur8-mask.png]]                         |
+ | blur(8), rotate(60), perspective((10, 45)) | [[file:./pics/ Multifilterblur8rotate60perspective1045.png]]  | [[file:./pics/ Multifilterblur8rotate60perspective1045-mask.png]]  |
+ | blur(8), perspective((10, 45)), rotate(60) | [[file:./pics/ Multifilterblur8perspective1045rotate60.png]]  | [[file:./pics/ Multifilterblur8perspective1045rotate60-mask.png]]  |
+ | brightness(-100), perspective((10, 45))    | [[file:./pics/ Multifilterbrightness-100perspective1045.png]] | [[file:./pics/ Multifilterbrightness-100perspective1045-mask.png]] |
+ |--------------------------------------------+-----------------------------------------------------------+----------------------------------------------------------------|
 
 
 
