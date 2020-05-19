@@ -887,21 +887,21 @@ rotation also on the white area.
 
    # filterDocument( imagePath, "Multifilter", filterTool, filterValuesPure, filterMask=True )
    filterTool = src.imageTools.multi_filter
-   filterDocument( imagePath, " Multifilter", filterTool, lamdaFuncs, filterMask=True, strValues=strValues )
+   filterDocument( imagePath, "Multifilter", filterTool, lamdaFuncs, filterMask=True, strValues=strValues )
 
 
  #+END_SRC
 
  #+RESULTS:
- | Multifilter                                | Filtered image                                            | Mask                                                           |
- |--------------------------------------------+-----------------------------------------------------------+----------------------------------------------------------------|
- | blur(8), rotate(60)                        | [[file:./pics/ Multifilterblur8rotate60.png]]                 | [[file:./pics/ Multifilterblur8rotate60-mask.png]]                 |
- | rotate(60)                                 | [[file:./pics/ Multifilterrotate60.png]]                      | [[file:./pics/ Multifilterrotate60-mask.png]]                      |
- | blur(8)                                    | [[file:./pics/ Multifilterblur8.png]]                         | [[file:./pics/ Multifilterblur8-mask.png]]                         |
- | blur(8), rotate(60), perspective((10, 45)) | [[file:./pics/ Multifilterblur8rotate60perspective1045.png]]  | [[file:./pics/ Multifilterblur8rotate60perspective1045-mask.png]]  |
- | blur(8), perspective((10, 45)), rotate(60) | [[file:./pics/ Multifilterblur8perspective1045rotate60.png]]  | [[file:./pics/ Multifilterblur8perspective1045rotate60-mask.png]]  |
- | brightness(-100), perspective((10, 45))    | [[file:./pics/ Multifilterbrightness-100perspective1045.png]] | [[file:./pics/ Multifilterbrightness-100perspective1045-mask.png]] |
- |--------------------------------------------+-----------------------------------------------------------+----------------------------------------------------------------|
+ | Multifilter                                | Filtered image                                           | Mask                                                          |
+ |--------------------------------------------+----------------------------------------------------------+---------------------------------------------------------------|
+ | blur(8), rotate(60)                        | [[file:./pics/Multifilterblur8rotate60.png]]                 | [[file:./pics/Multifilterblur8rotate60-mask.png]]                 |
+ | rotate(60)                                 | [[file:./pics/Multifilterrotate60.png]]                      | [[file:./pics/Multifilterrotate60-mask.png]]                      |
+ | blur(8)                                    | [[file:./pics/Multifilterblur8.png]]                         | [[file:./pics/Multifilterblur8-mask.png]]                         |
+ | blur(8), rotate(60), perspective((10, 45)) | [[file:./pics/Multifilterblur8rotate60perspective1045.png]]  | [[file:./pics/Multifilterblur8rotate60perspective1045-mask.png]]  |
+ | blur(8), perspective((10, 45)), rotate(60) | [[file:./pics/Multifilterblur8perspective1045rotate60.png]]  | [[file:./pics/Multifilterblur8perspective1045rotate60-mask.png]]  |
+ | brightness(-100), perspective((10, 45))    | [[file:./pics/Multifilterbrightness-100perspective1045.png]] | [[file:./pics/Multifilterbrightness-100perspective1045-mask.png]] |
+ |--------------------------------------------+----------------------------------------------------------+---------------------------------------------------------------|
 
 
 
