@@ -682,6 +682,8 @@ The unfiltered 200 pixel wide image
 
 *** Blur
 
+Blur filter options are =blur= (for class images) and =blur2= (for merged test image).
+
  #+BEGIN_SRC python :eval no-export :results output raw :session *Python* :exports results
    imagePath = "Images/signs/50-sign-start.png"
    filterTool = src.imageTools.blur_image
@@ -701,6 +703,9 @@ The unfiltered 200 pixel wide image
 
 
 *** Brightness
+
+Blur filter options are =brightness= (for class images) and
+=brightness2= (for merged test image).
 
  #+BEGIN_SRC python :eval no-export :results output raw :session *Python* :exports results
    imagePath = "Images/signs/50-sign-start.png"
@@ -727,6 +732,8 @@ The unfiltered 200 pixel wide image
 
 *** Gamma
 
+Not used.
+
  #+BEGIN_SRC python :eval no-export :results output raw :session *Python* :exports results
    imagePath = "Images/signs/50-sign-start.png"
    filterTool = src.imageTools.gamma_image
@@ -749,6 +756,8 @@ The unfiltered 200 pixel wide image
 
 *** Resize
 
+Not used.
+
  #+BEGIN_SRC python :eval no-export :results output raw :session *Python* :exports results
    imagePath = "Images/signs/50-sign-start.png"
    filterTool = src.imageTools.resize_image
@@ -767,6 +776,9 @@ The unfiltered 200 pixel wide image
 
 
 *** Rotate
+
+Rotate filter option is =rotates=. It is applied only on class images. 
+
 
  #+BEGIN_SRC python :eval no-export :results output raw :session *Python* :exports results
    imagePath = "Images/signs/50-sign-start.png"
@@ -808,6 +820,9 @@ rotation also on the white area.
 
 *** Perspective
 
+Perspective filter option is =perspective=. It is applied only on
+class images.
+
  #+BEGIN_SRC python :eval no-export :results output raw :session *Python* :exports results
    for moduleName in [ 'src.imageTools']:
        if moduleName  in sys.modules:
@@ -841,6 +856,16 @@ rotation also on the white area.
 
 
 *** Combined filter
+
+Option =classImageWrangles= defines filters to apply on class images.
+Similarly, option =testImageWrangles= defines filters applied on
+merged test images. 
+
+Combined filters include all possible value combinations for the
+filters listed in these options. Filter values includes also an
+special no-opration value, which is added automatically included when
+creating combined filters.
+
 
  #+BEGIN_SRC python :eval no-export :results output raw :session *Python* :exports results
    for moduleName in [ 'src.imageTools']:
