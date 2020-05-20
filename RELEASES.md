@@ -1,4 +1,4 @@
-## 0.1.6-SNAPSHOT/20200518-22:14:17
+## 0.1.6/20200520-15:46:40
 
 - options maxImages now wraps background images
 
