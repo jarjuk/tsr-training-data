@@ -203,11 +203,14 @@ rm -rf out/tsrVOC
 *** Generate example test images 
 
 Running =create-data.py= without any options generates example test
-images. For a more realistic example refer to [[file:yolov3-data.org]]
+images.  The option =--seed 42= is used only to reproduce execution
+results for the example.  For a more realistic example refer to
+[[file:yolov3-data.org]].
+
 
 #+name: run-default
 #+BEGIN_SRC sh :eval no-export :results output :exports both
-python  create-data.py
+python  create-data.py --seed 42
 #+END_SRC
 
 The output explains the generation run

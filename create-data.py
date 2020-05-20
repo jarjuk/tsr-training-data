@@ -12,8 +12,7 @@ import src.classImages
 flags.DEFINE_integer('debug', -1, '-3=fatal, -1=warning, 0=info, 1=debug')
 flags.DEFINE_integer('seed', None, 'Random seed (default None)')
 flags.DEFINE_boolean('interactive', False, 'show training data')
-flags.DEFINE_integer("maxImages", -1, "Number of images to generate, -1=proces all background images")
-
+flags.DEFINE_integer("maxImages", -1, "Number of images to generate, -1=process all background images once")
 
 # input
 flags.DEFINE_string('classImages', "Images/signs", "path to class images")
@@ -70,8 +69,11 @@ def main(_argv):
     
     logging.info('starting')
 
+    def resetBackgroundGen():
+        return( src.backgrounds.yieldBackgroundImagePaths(FLAGS.backgrounds) )
+
     # Generator yielding backgroud images
-    backgroundGen = src.backgrounds.yieldBackgroundImagePaths(FLAGS.backgrounds)
+    backgroundGen = resetBackgroundGen()
 
     # Paste random classImages to back
     classImagesList = list( src.classImages.yieldCroppedClassImages(FLAGS.classImages) )
@@ -119,48 +121,64 @@ def main(_argv):
     
     # Collect unique class names
     classnames = set()
-    for indx, mergedImage in enumerate(
-            src.createTrainingData.yieldMergedImages(
-                backgroundGen,
-                classImagesList, classImagesFilters,
-                maxImages=FLAGS.maxImages, wrangles=classImageWrangles,
-                debug=False, debugDebug=False )):
+    imageCount = 0
+    while True:
+        
+        for indx, mergedImage in enumerate(
+                src.createTrainingData.yieldMergedImages(
+                    backgroundGen,
+                    classImagesList, classImagesFilters,
+                    wrangles=classImageWrangles,
+                    debug=False, debugDebug=False )):
 
-        # iterate 'backgroundGen', choose random image from
-        # 'classImagesList', and run random wrangler from
-        # 'classImageWrangles' and merge classImage with background
-
-        logging.info( "classInfo value: {0} type: {1} startOrEnd: {2}".format(
-            mergedImage["classInfo"]["value"], mergedImage["classInfo"]["type"], mergedImage["classInfo"]["startOrEnd"], mergedImage["classInfo"]) )
-
-        # Use template to define class name
-        mergedImage["classname"] = FLAGS.classesTemplate.format(**mergedImage["classInfo"] )
-
-        # actual merge
-        testImage, _ = src.createTrainingData.createTestImage(
-            mergedImage, indx , testSet=FLAGS.testSet,
-            wrangles=testImageWrangles, filters=testImagesFilters )
-
-        if FLAGS.interactive: 
-            imgBox = src.imageTools.drawBoundingBox( testImage["testImage"], testImage["boundingBox"] )
-            src.util.showImage( imgBox, "Test image " + str(testImage["classInfo"] ) )
+            if FLAGS.maxImages > 0 and imageCount >= FLAGS.maxImages:
+                break
 
 
+            # iterate 'backgroundGen', choose random image from
+            # 'classImagesList', and run random wrangler from
+            # 'classImageWrangles' and merge classImage with background
 
-        # Collect classnames to a set 
-       
-        classnames.add(testImage["classname"])
+            logging.info( "classInfo value: {0} type: {1} startOrEnd: {2}".format(
+                mergedImage["classInfo"]["value"], mergedImage["classInfo"]["type"], mergedImage["classInfo"]["startOrEnd"], mergedImage["classInfo"]) )
 
-        # write 1) image, 2) label xml,  3) imagelist file entry
-        cv2.imwrite( os.path.join( imagesDirectory, testImage["imageFilename"]), testImage["testImage"] )
-        with open( os.path.join( annotationDirectory, testImage["labelFilename"]), "w+" ) as labelFile:
-            labelFile.write( testImage["vocXML"] )
-        with open( FLAGS.imagelist, "a") as imagelistFile:
-            ## imagelistFile.write( FLAGS.imagelistTemplate.format( ).format( )testImage["imageFilename"] + -1"\n" )
-            testImage["imageFileBasename"] = os.path.splitext( os.path.basename( testImage["imageFilename"] ))[0]
-            imagelistFileRow = FLAGS.imagelistTemplate.format(**testImage )
-            imagelistFile.write( str(imagelistFileRow)  )
-            
+            # Use template to define class name
+            mergedImage["classname"] = FLAGS.classesTemplate.format(**mergedImage["classInfo"] )
+
+            # actual merge
+            testImage, _ = src.createTrainingData.createTestImage(
+                mergedImage, imageCount , testSet=FLAGS.testSet,
+                wrangles=testImageWrangles, filters=testImagesFilters )
+
+            if FLAGS.interactive: 
+                imgBox = src.imageTools.drawBoundingBox( testImage["testImage"], testImage["boundingBox"] )
+                src.util.showImage( imgBox, "Test image " + str(testImage["classInfo"] ) )
+
+
+
+            # Collect classnames to a set 
+
+            classnames.add(testImage["classname"])
+
+            # write 1) image, 2) label xml,  3) imagelist file entry
+            imageCount = imageCount + 1
+            cv2.imwrite( os.path.join( imagesDirectory, testImage["imageFilename"]), testImage["testImage"] )
+            with open( os.path.join( annotationDirectory, testImage["labelFilename"]), "w+" ) as labelFile:
+                labelFile.write( testImage["vocXML"] )
+            with open( FLAGS.imagelist, "a") as imagelistFile:
+                ## imagelistFile.write( FLAGS.imagelistTemplate.format( ).format( )testImage["imageFilename"] + -1"\n" )
+                testImage["imageFileBasename"] = os.path.splitext( os.path.basename( testImage["imageFilename"] ))[0]
+                imagelistFileRow = FLAGS.imagelistTemplate.format(**testImage )
+                imagelistFile.write( str(imagelistFileRow)  )
+
+        # all requestesd images done
+        if FLAGS.maxImages < 0 or imageCount >= FLAGS.maxImages:
+            break
+        else:
+            # Generator yielding backgroud images
+            backgroundGen = resetBackgroundGen()
+
+
 
     # create classes file with unique classnames
     classNameLines = [ cName+"\n" for cName in sorted(classnames) ]
@@ -168,7 +186,7 @@ def main(_argv):
         classFile.writelines( classNameLines )
             
     print( "Created {0} test images in '{1}' with annotations in '{2}' folders".format(
-        indx+1, FLAGS.images,  FLAGS.annotations ))
+        imageCount, FLAGS.images,  FLAGS.annotations ))
     print( " class names in '{0}' and list of images '{1}'".format(
         FLAGS.classes, FLAGS.imagelist))
     print( " input from from class images '{0}' and backgrounds'{1}' folders".format(

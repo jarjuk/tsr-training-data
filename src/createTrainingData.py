@@ -5,13 +5,10 @@ from src.imageTools import resize, mergeWithBackground, wrangleImages
 
 
 def yieldMergedImages( backgroundGen, classImagesList, filters, wrangles=list(), 
-                     maxImages=3, debugDebug=False, debug=False):
+                     debugDebug=False, debug=False):
     """@brief merge random 'classImage' 'classImagesList' wrangled using
      one of the wrangeles from into next image taken from
      'backgroundGen'
-
-    sending to the generator something quits geneartion generations,
-    merge at most 'maxImages' images (-1 all images found)
 
     @param backgroundGen generator yielding tuples (imagePath:string,
     image:binary) of background images
@@ -66,10 +63,6 @@ def yieldMergedImages( backgroundGen, classImagesList, filters, wrangles=list(),
     
     cnt = 0
     while True:
-        # quit loop?
-        if maxImages > 0 and cnt > maxImages:
-            break
-        cnt +=1
         
         # find next background image for merge
         backgroundImagePath, img = nextBackgroundImage()
