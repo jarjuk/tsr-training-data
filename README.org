@@ -139,8 +139,7 @@ shows options
 flags:
 
 create-data.py:
-  --annotations: path to  annotations folder (defaults 'annotations' under
-    images folder)
+  --annotations: path to annotations folder
     (default: 'out/tsrVOC/Annotations')
   --backgrounds: path to backgroud images
     (default: 'backgrounds')
@@ -148,13 +147,21 @@ create-data.py:
     repeat this option to specify a list of values
     (default: '[3, 5]')
     (an integer)
+  --blur2: Blur filters used on test images;
+    repeat this option to specify a list of values
+    (default: '[1, 2, 3]')
+    (an integer)
   --brightness: Brigness filters used on classImages;
     repeat this option to specify a list of values
-    (default: '[-100, -50]')
+    (default: '[-70, -20]')
     (an integer)
-  --classImageWrangles: Filter wrangles to run class images;
+  --brightness2: Brigness filters used on test images;
     repeat this option to specify a list of values
-    (default: "['blur', 'rotate', 'brightness']")
+    (default: '[-30, -20]')
+    (an integer)
+  --classImageWrangles: Filter wrangles to run on class images;
+    repeat this option to specify a list of values
+    (default: "['blur', 'rotate', 'brightness', 'perspective']")
   --classImages: path to class images
     (default: 'Images/signs')
   --classes: path file where classnames are written
@@ -172,18 +179,21 @@ create-data.py:
     (default: 'out/tsrVOC/JPEGImages')
   --[no]interactive: show training data
     (default: 'false')
-  --maxImages: Number of images to generate, -1=proces all background images
-    (default: '-1')
+  --maxImages: Number of images to generate
+    (default: '7')
     (an integer)
   --perspective: Possible perspective values;
     repeat this option to specify a list of values
     (default: "['45,-10', '10,10', '-30,10']")
   --rotates: Rotate filters used on classImages;
     repeat this option to specify a list of values
-    (default: '[10, -45]')
+    (default: '[10, 4, -5, -10]')
     (an integer)
   --seed: Random seed (default None)
     (an integer)
+  --testImageWrangles: Filter wrangles to run on test images (=final result);
+    repeat this option to specify a list of values
+    (default: "['brightness', 'blur']")
   --testSet: Test set name (=folder in output -directory)
     (default: 'TSR1')
 

@@ -31,8 +31,6 @@ echo export STAGE=$stage
 
 #+RESULTS:
 : export STAGE=$HOME/stage/tsr/dtd
-
-
 Create stage directory
 
 #+BEGIN_SRC sh :eval no-export :results output :var STAGE=stage :exports code
@@ -143,72 +141,288 @@ rm -f xfz dtd-r1.0.1.tar.gz
 #+RESULTS:
 
 
-** Generated test images background =$STAGE/dtd=
+** Generated test images using background =$STAGE/dtd=
+
+*** classImages =Images/signs=
 
 #+name: run-dtd
 #+BEGIN_SRC sh :eval no-export :results output :exports both :var STAGE=stage
 python  create-data.py \
-      --annotations $STAGE/tsrVOC/Annotations \
+      --backgrounds $STAGE/dtd  \
+      --classImages Images/signs \
+      --rotates=-10 \
+      --rotates=-4 \
+      --rotates=-3 \
+      --rotates=2 \
+      --rotates=4 \
+      --rotates=6 \
+      --rotates=10 \
+      --rotates=10 \
+      --perspective=10,-10 \
+      --perspective=-10,10 \
+      --perspective=-5,4 \
+      --perspective=-5,-4 \
       --images $STAGE/tsrVOC/JPEGImages \
+      --annotations $STAGE/tsrVOC/Annotations \
       --backgrounds $STAGE/dtd  \
       --classes $STAGE/tsrVOC/classes.txt \
       --imagelist $STAGE/tsrVOC/imagelist.txt
 #+END_SRC
 
 #+RESULTS: run-dtd
-: classFilters {'rotate': [10, -45], 'blur': [3, 5], 'brightness': [-100, -50], 'perspective': ['45,-10', '10,10', '-30,10']}
+: Created 5640 test images in '/home/jj/stage/tsr/dtd/tsrVOC2/JPEGImages' with annotations in '/home/jj/stage/tsr/dtd/tsrVOC2/Annotations' folders
+:  class names in '/home/jj/stage/tsr/dtd/tsrVOC2/classes.txt' and list of images '/home/jj/stage/tsr/dtd/tsrVOC2/imagelist.txt'
+:  input from from class images '/home/jj/stage/tsr/dtd/sign2' and backgrounds'/home/jj/stage/tsr/dtd/dtd' folders
+
+#+BEGIN_SRC sh :eval no-export :results output :var STAGE=stage
+cat $STAGE/tsrVOC/classes.txt
+#+END_SRC
+
+#+RESULTS:
+#+begin_example
+100-start
+120-start
+20-end
+20-start
+30-end
+30-start
+40-end
+40-start
+50-end
+50-start
+60-end
+60-start
+70-end
+70-start
+80-start
+urban-end
+urban-start
+#+end_example
+
+
+*** classImages 2 images from =Images/signs=
+
+#+BEGIN_SRC sh :eval no-export :results output :var STAGE=stage
+mkdir $STAGE/sign2
+#+END_SRC
+
+#+RESULTS:
+
+Copy two images 
+
+#+BEGIN_SRC sh :eval no-export :results output :var STAGE=stage
+cp Images/signs/60-sign-start.png $STAGE/sign2
+cp Images/signs/80-sign-start.png $STAGE/sign2
+ls -ltr $STAGE/sign2
+#+END_SRC
+
+#+RESULTS:
+: total 364
+: -rw-rw-r-- 1 jj jj 210360 touko 19 15:38 60-sign-start.png
+: -rw-rw-r-- 1 jj jj 159586 touko 19 15:38 80-sign-start.png
+
+
+
+#+name: run-dtd
+#+BEGIN_SRC sh :eval no-export :results output :exports both :var STAGE=stage
+python  create-data.py \
+      --backgrounds $STAGE/dtd  \
+      --classImages $STAGE/sign2 \
+      --rotates=-10 \
+      --rotates=-4 \
+      --rotates=-3 \
+      --rotates=2 \
+      --rotates=4 \
+      --rotates=6 \
+      --rotates=10 \
+      --rotates=10 \
+      --perspective=10,-10 \
+      --perspective=-10,10 \
+      --perspective=-5,4 \
+      --perspective=-5,-4 \
+      --images $STAGE/tsrVOC2/JPEGImages \
+      --annotations $STAGE/tsrVOC2/Annotations \
+      --classes $STAGE/tsrVOC2/classes.txt \
+      --imagelist $STAGE/tsrVOC2/imagelist.txt
+#+END_SRC
+
+#+RESULTS: run-dtd
 : Created 5640 test images in '/home/jj/stage/tsr/dtd/tsrVOC/JPEGImages' with annotations in '/home/jj/stage/tsr/dtd/tsrVOC/Annotations' folders
 :  class names in '/home/jj/stage/tsr/dtd/tsrVOC/classes.txt' and list of images '/home/jj/stage/tsr/dtd/tsrVOC/imagelist.txt'
 :  input from from class images 'Images/signs' and backgrounds'/home/jj/stage/tsr/dtd/dtd' folders
 
-
-** Create test and validation sets
-
-Randomize lines in image files =imagelist.txt=
-
 #+BEGIN_SRC sh :eval no-export :results output :var STAGE=stage
-shuf $STAGE/tsrVOC/imagelist.txt > $STAGE/tsrVOC/imagelist-shuffed.txt 
+cat $STAGE/tsrVOC2/classes.txt
 #+END_SRC
 
 #+RESULTS:
+: 60-start
+: 80-start
 
-Validate that line count =5640= in =imagelist-shuffed.txt= matches the
-line count of the original =imagelist.txt= file:
 
-#+BEGIN_SRC sh :eval no-export :results output :var STAGE=stage :exports both
-wc -l $STAGE/tsrVOC/imagelist.txt $STAGE/tsrVOC/imagelist-shuffed.txt
-#+END_SRC
+** Create test and validation sets 
 
-#+RESULTS:
-:   5640 /home/jj/stage/tsr/dtd/tsrVOC/imagelist.txt
-:   5640 /home/jj/stage/tsr/dtd/tsrVOC/imagelist-shuffed.txt
-:  11280 total
+*** for  =$STAGE/tsrVOC=
 
-Take first 20% (1128) lines to validation and rest of the file 80%
-(4512) to training into files in =$STAGE/tsrVOC/ImageSets/Main=
--directory
+ Randomize lines in image files =imagelist.txt=
 
-#+BEGIN_SRC sh :eval no-export :results output :var STAGE=stage
-mkdir -p  $STAGE/tsrVOC/ImageSets/Main
-head -1128 $STAGE/tsrVOC/imagelist-shuffed.txt > $STAGE/tsrVOC/ImageSets/Main/aeroplane_val.txt
-tail -4512 $STAGE/tsrVOC/imagelist-shuffed.txt > $STAGE/tsrVOC/ImageSets/Main/aeroplane_train.txt
-#+END_SRC
+ #+BEGIN_SRC sh :eval no-export :results output :var STAGE=stage
+ shuf $STAGE/tsrVOC/imagelist.txt > $STAGE/tsrVOC/imagelist-shuffed.txt 
+ #+END_SRC
 
-#+RESULTS:
+ #+RESULTS:
 
-Validate that exactly =5640= lines are in validation and training set files
+ Validate that line count =5640= in =imagelist-shuffed.txt= matches the
+ line count of the original =imagelist.txt= file:
 
-#+BEGIN_SRC sh :eval no-export :results output :var STAGE=stage :exports both
-wc  -l $STAGE/tsrVOC/ImageSets/Main/*
-#+END_SRC
+ #+BEGIN_SRC sh :eval no-export :results output :var STAGE=stage :exports both
+ wc -l $STAGE/tsrVOC/imagelist.txt $STAGE/tsrVOC/imagelist-shuffed.txt
+ #+END_SRC
 
-#+RESULTS:
-:   4512 /home/jj/stage/tsr/dtd/tsrVOC/ImageSets/Main/aeroplane_train.txt
-:   1128 /home/jj/stage/tsr/dtd/tsrVOC/ImageSets/Main/aeroplane_val.txt
-:   5640 total
+ #+RESULTS:
+ :   5640 /home/jj/stage/tsr/dtd/tsrVOC/imagelist.txt
+ :   5640 /home/jj/stage/tsr/dtd/tsrVOC/imagelist-shuffed.txt
+ :  11280 total
+
+ Reserve 40 images for testing
+ #+BEGIN_SRC sh :eval no-export :results output :var STAGE=stage :exports both
+ tail -40 $STAGE/tsrVOC/imagelist-shuffed.txt > $STAGE/tsrVOC/imagelist-shuffed-test.txt
+ head -5600 $STAGE/tsrVOC/imagelist-shuffed.txt > $STAGE/tsrVOC/imagelist-shuffed-train-and-val.txt
+ wc -l $STAGE/tsrVOC/imagelist.txt $STAGE/tsrVOC/imagelist-shuffed.txt
+ wc -l $STAGE/tsrVOC/imagelist-shuffed-test.txt $STAGE/tsrVOC/imagelist-shuffed-train-and-val.txt
+ #+END_SRC
+
+ #+RESULTS:
+ :   5640 /home/jj/stage/tsr/dtd/tsrVOC/imagelist.txt
+ :   5640 /home/jj/stage/tsr/dtd/tsrVOC/imagelist-shuffed.txt
+ :  11280 total
+ :     40 /home/jj/stage/tsr/dtd/tsrVOC/imagelist-shuffed-test.txt
+ :   5600 /home/jj/stage/tsr/dtd/tsrVOC/imagelist-shuffed-train-and-val.txt
+ :   5640 total
+
+
+ Validate that 40 test images are diffent from training validation sets
+
+ #+BEGIN_SRC sh :eval no-export :results output :var STAGE=stage
+ diff $STAGE/tsrVOC/imagelist-shuffed-train-and-val.txt $STAGE/tsrVOC/imagelist-shuffed-test.txt  | grep "^>" | wc -l
+ #+END_SRC
+
+ #+RESULTS:
+ : 40
+
+
+
+ Take first 20% (1120) lines to validation and rest of the file 80%
+ (4480) to training into files in =$STAGE/tsrVOC/ImageSets/Main=
+ -directory
+
+ #+BEGIN_SRC sh :eval no-export :results output :var STAGE=stage
+ mkdir -p  $STAGE/tsrVOC/ImageSets/Main
+ head -1120 $STAGE/tsrVOC/imagelist-shuffed-train-and-val.txt > $STAGE/tsrVOC/ImageSets/Main/aeroplane_val.txt
+ tail -4480 $STAGE/tsrVOC/imagelist-shuffed-train-and-val.txt > $STAGE/tsrVOC/ImageSets/Main/aeroplane_train.txt
+ #+END_SRC
+
+ #+RESULTS:
+
+ Validate that exactly =5600= lines are in validation and training set
+ files
+
+ #+BEGIN_SRC sh :eval no-export :results output :var STAGE=stage :exports both
+ wc  -l $STAGE/tsrVOC/ImageSets/Main/*
+ #+END_SRC
+
+ #+RESULTS:
+ :   4480 /home/jj/stage/tsr/dtd/tsrVOC/ImageSets/Main/aeroplane_train.txt
+ :   1120 /home/jj/stage/tsr/dtd/tsrVOC/ImageSets/Main/aeroplane_val.txt
+ :   5600 total
+
+
+*** for  =$STAGE/tsrVOC2=
+
+ Randomize lines in image files =imagelist.txt=
+
+ #+BEGIN_SRC sh :eval no-export :results output :var STAGE=stage
+ shuf $STAGE/tsrVOC2/imagelist.txt > $STAGE/tsrVOC2/imagelist-shuffed.txt 
+ #+END_SRC
+
+ #+RESULTS:
+
+ Validate that line count =5640= in =imagelist-shuffed.txt= matches the
+ line count of the original =imagelist.txt= file:
+
+ #+BEGIN_SRC sh :eval no-export :results output :var STAGE=stage :exports both
+ wc -l $STAGE/tsrVOC2/imagelist.txt $STAGE/tsrVOC2/imagelist-shuffed.txt
+ #+END_SRC
+
+ #+RESULTS:
+ :   5640 /home/jj/stage/tsr/dtd/tsrVOC2/imagelist.txt
+ :   5640 /home/jj/stage/tsr/dtd/tsrVOC2/imagelist-shuffed.txt
+ :  11280 total
+
+ Reserve 40 images for testing
+ #+BEGIN_SRC sh :eval no-export :results output :var STAGE=stage :exports both
+ tail -40 $STAGE/tsrVOC2/imagelist-shuffed.txt > $STAGE/tsrVOC2/imagelist-shuffed-test.txt
+ head -5600 $STAGE/tsrVOC2/imagelist-shuffed.txt > $STAGE/tsrVOC2/imagelist-shuffed-train-and-val.txt
+ wc -l $STAGE/tsrVOC2/imagelist.txt $STAGE/tsrVOC2/imagelist-shuffed.txt
+ wc -l $STAGE/tsrVOC2/imagelist-shuffed-test.txt $STAGE/tsrVOC2/imagelist-shuffed-train-and-val.txt
+ #+END_SRC
+
+ #+RESULTS:
+ :   5640 /home/jj/stage/tsr/dtd/tsrVOC2/imagelist.txt
+ :   5640 /home/jj/stage/tsr/dtd/tsrVOC2/imagelist-shuffed.txt
+ :  11280 total
+ :     40 /home/jj/stage/tsr/dtd/tsrVOC2/imagelist-shuffed-test.txt
+ :   5600 /home/jj/stage/tsr/dtd/tsrVOC2/imagelist-shuffed-train-and-val.txt
+ :   5640 total
+
+ Validate that 40 test images are diffent from training validation sets
+
+ #+BEGIN_SRC sh :eval no-export :results output :var STAGE=stage
+ diff $STAGE/tsrVOC2/imagelist-shuffed-train-and-val.txt $STAGE/tsrVOC2/imagelist-shuffed-test.txt  | grep "^>" | wc -l
+ #+END_SRC
+
+ #+RESULTS:
+ : 40
+
+
+
+ Take first 20% (1120) lines to validation and rest of the file 80%
+ (4480) to training into files in =$STAGE/tsrVOC2/ImageSets/Main=
+ -directory
+
+ #+BEGIN_SRC sh :eval no-export :results output :var STAGE=stage
+ mkdir -p  $STAGE/tsrVOC2/ImageSets/Main
+ head -1120 $STAGE/tsrVOC2/imagelist-shuffed-train-and-val.txt > $STAGE/tsrVOC2/ImageSets/Main/aeroplane_val.txt
+ tail -4480 $STAGE/tsrVOC2/imagelist-shuffed-train-and-val.txt > $STAGE/tsrVOC2/ImageSets/Main/aeroplane_train.txt
+ #+END_SRC
+
+ #+RESULTS:
+
+ Validate that exactly =5600= lines are in validation and training set
+ files
+
+ #+BEGIN_SRC sh :eval no-export :results output :var STAGE=stage :exports both
+ wc  -l $STAGE/tsrVOC2/ImageSets/Main/*
+ #+END_SRC
+
+ #+RESULTS:
+ :   4480 /home/jj/stage/tsr/dtd/tsrVOC2/ImageSets/Main/aeroplane_train.txt
+ :   1120 /home/jj/stage/tsr/dtd/tsrVOC2/ImageSets/Main/aeroplane_val.txt
+ :   5600 total
 
 
 ** Convert training and validation data sets to tensorflow format
+
+Tag number for =marcus2002/yolov3-tf2-training=
+
+ #+name: tag-number 
+ #+BEGIN_SRC R :exports code
+ 1
+ #+END_SRC
+
+
+*** Convert =$STAGE/tsrVOC= to =$STAGE/tfData=
+
 Create directory where tensorflow data files will be created
 
 #+BEGIN_SRC sh :eval no-export :results output :var STAGE=stage
@@ -217,14 +431,6 @@ rm -f $STAGE/tfData/*
 #+END_SRC
 
 #+RESULTS:
-
-Tag number for =marcus2002/yolov3-tf2-training=
-
- #+name: tag-number 
- #+BEGIN_SRC R :exports none
- 1
- #+END_SRC
-
 
 
 Convert training data under =$STAGE/out/tsrVOC= directory. 
@@ -278,13 +484,83 @@ ls -ltr  $STAGE/tfData
 #+END_SRC
 
 #+RESULTS:
-: total 561124
-: -rw-r--r-- 1 jj jj 456990898 touko 18 14:13 tsr_train.tfrecord
-: -rw-r--r-- 1 jj jj 117584840 touko 18 14:13 tsr_val.tfrecord
+: total 503908
+: -rw-r--r-- 1 jj jj 413311502 touko 19 15:50 tsr_train.tfrecord
+: -rw-r--r-- 1 jj jj 102679089 touko 19 15:51 tsr_val.tfrecord
+
+
+*** Convert =$STAGE/tsrVOC2= to =$STAGE/tfData2=
+
+Create directory where tensorflow data files will be created
+
+#+BEGIN_SRC sh :eval no-export :results output :var STAGE=stage
+mkdir $STAGE/tfData2
+rm -f $STAGE/tfData2/*
+#+END_SRC
+
+#+RESULTS:
+
+
+Convert training data under =$STAGE/out/tsrVOC2= directory. 
+
+ #+BEGIN_SRC sh :eval no-export :results output :var TAG=tag-number :var STAGE=stage
+   docker run \
+        --user $(id -u):$(id -g) \
+        --workdir /yolov3-tf2 \
+        --volume $STAGE/tsrVOC2/:/yolov3-tf2/tsrVOC2 \
+        --volume $STAGE/tfData2/:/yolov3-tf2/tfData2 \
+        --volume="/etc/passwd:/etc/passwd:ro" \
+        marcus2002/yolov3-tf2-training:$TAG \
+          python tools/voc2012.py \
+            --classes tsrVOC2/classes.txt \
+            --data_dir tsrVOC2 \
+            --output_file tfData2/tsr_train.tfrecord \
+            --split train
+ #+END_SRC
+
+ #+RESULTS:
+
+#+BEGIN_SRC sh :eval no-export :results output :var STAGE=stage
+ls -ltr  $STAGE/tfData2
+#+END_SRC
+
+#+RESULTS:
+: total 406600
+: -rw-r--r-- 1 jj jj 416350622 touko 19 15:54 tsr_train.tfrecord
+
+Convert validation dataset
+
+ #+BEGIN_SRC sh :eval no-export :results output :var TAG=tag-number :var STAGE=stage
+   docker run \
+        --user $(id -u):$(id -g) \
+        --workdir /yolov3-tf2 \
+        --volume $STAGE/tsrVOC2/:/yolov3-tf2/tsrVOC2 \
+        --volume $STAGE/tfData2/:/yolov3-tf2/tfData2 \
+        --volume="/etc/passwd:/etc/passwd:ro" \
+        marcus2002/yolov3-tf2-training:$TAG \
+          python tools/voc2012.py \
+            --classes tsrVOC2/classes.txt \
+            --data_dir tsrVOC2 \
+            --output_file tfData2/tsr_val.tfrecord \
+            --split val
+ #+END_SRC
+
+ #+RESULTS:
+
+#+BEGIN_SRC sh :eval no-export :results output :var STAGE=stage
+ls -ltr  $STAGE/tfData2
+#+END_SRC
+
+#+RESULTS:
+: total 507964
+: -rw-r--r-- 1 jj jj 416350622 touko 19 15:54 tsr_train.tfrecord
+: -rw-r--r-- 1 jj jj 103794470 touko 19 15:55 tsr_val.tfrecord
 
 
 
 ** Visualy validate tensorflow conversion
+
+*** Validate =$STAGE/tfData=
 
 To validate dataset in =$STAGE/tfData/tsr_train.tfrecord= run 
 
@@ -334,7 +610,54 @@ and check file =$STAGE/tfData/visu-valset.jpg=
 [[file:~/stage/tsr/dtd/tfData/visu-valset.jpg]]
 
 
+*** Validate =$STAGE/tfData2=
 
+To validate dataset in =$STAGE/tfData2/tsr_train.tfrecord= run 
+
+#+BEGIN_SRC sh :eval no-export :results output :var TAG=tag-number :var STAGE=stage
+  docker run \
+       --user $(id -u):$(id -g) \
+       --workdir /yolov3-tf2 \
+       --volume $STAGE/tsrVOC2/:/yolov3-tf2/tsrVOC2 \
+       --volume $STAGE/tfData2/:/yolov3-tf2/tfData2 \
+       --volume="/etc/passwd:/etc/passwd:ro" \
+       marcus2002/yolov3-tf2-training:$TAG \
+         python tools/visualize_dataset.py \
+           --classes tsrVOC2/classes.txt \
+           --dataset  tfData2/tsr_train.tfrecord \
+           --output tfData2/visu-trainset.jpg
+
+#+END_SRC
+
+#+RESULTS:
+
+and check file =$STAGE/tfData2/visu-trainset.jpg=
+
+[[file:~/stage/tsr/dtd/tfData2/visu-trainset.jpg]]
+
+To validate dataset in =$STAGE/tfData2/tsr_val.tfrecord= run
+
+#+BEGIN_SRC sh :eval no-export :results output :var TAG=tag-number :var STAGE=stage
+  docker run \
+       --user $(id -u):$(id -g) \
+       --workdir /yolov3-tf2 \
+       --volume $STAGE/tsrVOC2/:/yolov3-tf2/tsrVOC2 \
+       --volume $STAGE/tfData2/:/yolov3-tf2/tfData2 \
+       --volume="/etc/passwd:/etc/passwd:ro" \
+       marcus2002/yolov3-tf2-training:$TAG \
+         python tools/visualize_dataset.py \
+           --classes tsrVOC2/classes.txt \
+           --dataset  tfData2/tsr_val.tfrecord \
+           --output tfData2/visu-valset.jpg
+
+#+END_SRC
+
+#+RESULTS:
+
+
+and check file =$STAGE/tfData2/visu-valset.jpg=
+
+[[file:~/stage/tsr/dtd/tfData2/visu-valset.jpg]]
 
 
 * Fin                                                              :noexport:

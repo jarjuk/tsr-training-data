@@ -1,4 +1,5 @@
 import os.path
+import sys
 from absl import app, flags, logging
 from absl.flags import FLAGS
 import random
@@ -12,7 +13,7 @@ import src.classImages
 flags.DEFINE_integer('debug', -1, '-3=fatal, -1=warning, 0=info, 1=debug')
 flags.DEFINE_integer('seed', None, 'Random seed (default None)')
 flags.DEFINE_boolean('interactive', False, 'show training data')
-flags.DEFINE_integer("maxImages", -1, "Number of images to generate, -1=process all background images once")
+flags.DEFINE_integer("maxImages", 7, "Number of images to generate")
 
 # input
 flags.DEFINE_string('classImages', "Images/signs", "path to class images")
@@ -56,7 +57,18 @@ def ensure_filedir(file_path):
         os.makedirs(directory)        
 
 def main(_argv):
-    
+
+
+    def progress(count, total, status=''):
+        # https://gist.github.com/vladignatyev/06860ec2040cb497f0f3
+        bar_len = 60
+        filled_len = int(round(bar_len * count / float(total)))
+
+        percents = round(100.0 * count / float(total), 1)
+        bar = '=' * filled_len + '-' * (bar_len - filled_len)
+
+        sys.stderr.write('[%s] %s%s ...%s\r' % (bar, percents, '%', status))
+        sys.stderr.flush()  # As suggested by Rom Ruben (see: http://stackoverflow.com/questions/3173320/text-progress-bar-in-the-c
 
     logging.set_verbosity(FLAGS.debug)
     random.seed( FLAGS.seed )
@@ -99,8 +111,6 @@ def main(_argv):
     logging.info( "testImageWrangles={0}".format( testImageWrangles))    
     
     
-    # First image number
-    indx = 1
 
     logging.info( "Merge class images '{0}' with backgrounds '{1}' to a test set '{2}' with image  '{3}' and annotations {4} folders ".format(
         FLAGS.classImages, FLAGS.backgrounds, FLAGS.testSet, FLAGS.images, FLAGS.annotations ))
@@ -124,14 +134,13 @@ def main(_argv):
     imageCount = 0
     while True:
         
-        for indx, mergedImage in enumerate(
-                src.createTrainingData.yieldMergedImages(
+        for mergedImage in  src.createTrainingData.yieldMergedImages(
                     backgroundGen,
                     classImagesList, classImagesFilters,
                     wrangles=classImageWrangles,
-                    debug=False, debugDebug=False )):
+                    debug=False, debugDebug=False ):
 
-            if FLAGS.maxImages > 0 and imageCount >= FLAGS.maxImages:
+            if imageCount >= FLAGS.maxImages:
                 break
 
 
@@ -171,11 +180,13 @@ def main(_argv):
                 imagelistFileRow = FLAGS.imagelistTemplate.format(**testImage )
                 imagelistFile.write( str(imagelistFileRow)  )
 
+            progress( imageCount, FLAGS.maxImages, "Images")
+
         # all requestesd images done
-        if FLAGS.maxImages < 0 or imageCount >= FLAGS.maxImages:
+        if imageCount >= FLAGS.maxImages:
             break
         else:
-            # Generator yielding backgroud images
+            # Restart generator yielding backgroud images
             backgroundGen = resetBackgroundGen()
 
 
